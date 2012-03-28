@@ -44,9 +44,7 @@ public class App
         String term = args[0];
         System.out.println("Term to analyze: " + term);
         List<Analysis> analysisList = voikko.analyze(term);
-        for (int i = 1; i < 10000; i++) {
-          analysisList = voikko.analyze(term);
-        }
+        analysisList = voikko.analyze(term);
         if (!analysisList.isEmpty())
         {
             int i = 0;
