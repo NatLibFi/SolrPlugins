@@ -49,6 +49,7 @@ public class App
         {
             int i = 0;
             String baseform = term;
+            int wordLen = baseform.length();
             for (Analysis analysis: analysisList) {
                 System.out.println("\nAnalysis " + (++i) + " (" + analysis.get(CLASS_ATTR) + "):\n");
                 if (analysis.containsKey(BASEFORM_ATTR)) {
@@ -74,6 +75,13 @@ public class App
                         }
                       }
                       int len = base.length();
+                      if (offset + len > wordLen) {
+                        offset = wordLen - len;
+                        if (offset < 0) {
+                          offset = 0;
+                          len = wordLen;
+                        }
+                      }
                       System.out.println("    " + base + ", " + offset + ", " + len + "\n");
                       offset += len;
                       

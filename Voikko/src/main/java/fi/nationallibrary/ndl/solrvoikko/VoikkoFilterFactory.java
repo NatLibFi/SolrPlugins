@@ -30,6 +30,7 @@ import org.puimula.libvoikko.Voikko;
 public class VoikkoFilterFactory extends BaseTokenFilterFactory {
 
   private boolean expandCompounds = false;
+  private boolean separateTokens = true; // Whether to create separate tokens (useful for indexing) or a string of tokens (useful for search)
   private int minWordSize;
   private int minSubwordSize;
   private int maxSubwordSize;
@@ -43,10 +44,11 @@ public class VoikkoFilterFactory extends BaseTokenFilterFactory {
     minSubwordSize = getInt("minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
     maxSubwordSize = getInt("maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
     expandCompounds = getBoolean("expandCompounds", false);
+    separateTokens = getBoolean("separateTokens", true);
   }
 
   public TokenStream create(TokenStream input) {
-    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize);
+    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, separateTokens);
   }
   
   @Override

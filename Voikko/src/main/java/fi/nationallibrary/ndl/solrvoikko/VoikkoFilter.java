@@ -30,8 +30,6 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -63,9 +61,10 @@ public class VoikkoFilter extends TokenFilter {
   private final PositionIncrementAttribute posIncAtt = addAttribute(PositionIncrementAttribute.class);
   private State current = null;
   private final boolean expandCompounds;
-  private int minWordSize;
-  private int minSubwordSize;
-  private int maxSubwordSize;
+  private final int minWordSize;
+  private final int minSubwordSize;
+  private final int maxSubwordSize;
+  private final boolean separateTokens;
 
   private final LinkedList<CompoundToken> tokens;
 
@@ -77,7 +76,7 @@ public class VoikkoFilter extends TokenFilter {
     }
   };
   
-  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize) {
+  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean separateTokens) {
     super(input);
     this.tokens = new LinkedList<CompoundToken>();
     this.voikko = voikko;
@@ -85,6 +84,7 @@ public class VoikkoFilter extends TokenFilter {
     this.minWordSize = minWordSize;
     this.minSubwordSize = minSubwordSize;
     this.maxSubwordSize = maxSubwordSize;
+    this.separateTokens = separateTokens;
   }
 
   @Override
@@ -94,14 +94,23 @@ public class VoikkoFilter extends TokenFilter {
       CompoundToken token = tokens.removeFirst();
       restoreState(current); // keep all other attributes untouched
       termAtt.setEmpty().append(token.txt);
-      offsetAtt.setOffset(token.startOffset, token.endOffset);
+      if (!separateTokens) {
+        for (CompoundToken t: tokens) {
+          termAtt.append(' ');
+          termAtt.append(t.txt);
+        }
+        tokens.clear();
+      }
+      // TODO: offsets are difficult to handle and the code below doesn't result in correct information. But would we even want to?
+      // offsetAtt.setOffset(token.startOffset, token.endOffset);
       posIncAtt.setPositionIncrement(0);
       return true;
     }
     current = null; // not really needed, but for safety
     if (input.incrementToken()) {
       String word = termAtt.toString();
-      if (word.length() < minWordSize || !word.matches("[a-zA-ZåäöÅÄÖ]+")) {
+      int wordLen = word.length();
+      if (wordLen < minWordSize || !word.matches("[a-zA-ZåäöÅÄÖ]+")) {
         return true;
       }
       List<Analysis> analysisList = null;
@@ -123,23 +132,31 @@ public class VoikkoFilter extends TokenFilter {
         
         if (expandCompounds && analysis.containsKey(WORDBASES_ATTR)) {
           String wordbases = analysis.get(WORDBASES_ATTR);
-          int start = wordbases.indexOf('('), end = 0;
           // Don't proceed unless we have more than one word
-          if (wordbases.indexOf('+', start+1) != -1) {
+          if (wordbases.indexOf('+', 1) != -1) {
             current = captureState();
-            int offset = 0;
+            int offset = offsetAtt.startOffset();
             for (String wordbase: wordbases.split("\\+")) {
               String base = wordbase;
-              start = wordbase.indexOf('(');
+              int start = wordbase.indexOf('(');
               if (start != -1) {
-                end = wordbase.indexOf(')');
+                int end = wordbase.indexOf(')');
                 if (end != -1) {
                   base = wordbase.substring(start+1, end);
                 }
               }
               int len = base.length();
               if (len >= minSubwordSize && len <= maxSubwordSize && !wordbase.equals(termAtt.toString())) {
-                tokens.add(new CompoundToken(base, offset, len));
+                if (offset + len > wordLen) {
+                  offset = wordLen - len;
+                  if (offset < 0) {
+                    offset = 0;
+                    len = wordLen;
+                  }
+                  tokens.add(new CompoundToken(base, offset, len));
+                } else {
+                  tokens.add(new CompoundToken(base, offset, len));
+                }
               }
               offset += len;
             }
