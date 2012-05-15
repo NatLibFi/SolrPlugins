@@ -103,8 +103,7 @@ public class VoikkoFilter extends TokenFilter {
         }
         tokens.clear();
       }
-      // TODO: offsets are difficult to handle and the code below doesn't result in correct information. But would we even want to?
-      // offsetAtt.setOffset(token.startOffset, token.endOffset);
+      offsetAtt.setOffset(token.startOffset, token.endOffset);
       posIncAtt.setPositionIncrement(0);
       return true;
     }
@@ -137,30 +136,82 @@ public class VoikkoFilter extends TokenFilter {
           // Don't proceed unless we have more than one word
           if (wordbases.indexOf('+', 1) != -1) {
             current = captureState();
-            int offset = offsetAtt.startOffset();
-            for (String wordbase: wordbases.split("\\+")) {
-              String base = wordbase;
-              int start = wordbase.indexOf('(');
-              if (start != -1) {
-                int end = wordbase.indexOf(')');
-                if (end != -1) {
-                  base = wordbase.substring(start+1, end);
+            int startOffset = offsetAtt.startOffset();
+            StringBuilder wordBuilder = new StringBuilder();
+            int wordBeginIndex = 0;
+            int wordEndIndex = 0;
+            StringBuilder wordPartBuilder = new StringBuilder();
+            StringBuilder baseBuilder = new StringBuilder();
+            boolean inWord = false;
+            boolean inBase = false;
+            boolean isDerivSuffix = false;
+            for (int i = 0; i < wordbases.length(); i++) {
+              char c = wordbases.charAt(i);
+              if (c == '+') {
+                if (!inWord) {
+                  inWord = true;
+                  continue;
+                }
+                if (inBase) {
+                  isDerivSuffix = true;
+                  continue;
+                }
+                else {
+                  // inflectional suffix complete
+                  wordBuilder.setLength(0);
+                  wordPartBuilder.setLength(0);
+                  baseBuilder.setLength(0);
+                  wordBeginIndex = wordEndIndex;
+                  continue;
                 }
               }
-              int len = base.length();
-              if (len >= minSubwordSize && len <= maxSubwordSize && !wordbase.equals(termAtt.toString())) {
-                if (offset + len > wordLen) {
-                  offset = wordLen - len;
-                  if (offset < 0) {
-                    offset = 0;
-                    len = wordLen;
+              if (c == '(') {
+                if (inWord && !inBase) {
+                  inBase = true;
+                  continue;
+                }
+                throw new IllegalStateException("Failed to parse Voikko word bases (c == '(', " + 
+                  "inWord == " + (inWord ? "true" : "false") + ", " + 
+                  "inBase == " + (inBase ? "true" : "false") + ")");
+              }
+              if (c == ')') {
+                if (inBase) {
+                  String base;
+                  int len;
+                  if (isDerivSuffix) {
+                    base = wordBuilder.toString() + baseBuilder.toString();
+                    len = wordBuilder.length() + wordPartBuilder.length();
+                    wordBuilder.append(wordPartBuilder);
                   }
-                  tokens.add(new CompoundToken(base, offset, len));
-                } else {
-                  tokens.add(new CompoundToken(base, offset, len));
+                  else {
+                    base = baseBuilder.toString();
+                    len = wordPartBuilder.length();
+                    wordBeginIndex = wordEndIndex - len;
+                    wordBuilder.append(wordPartBuilder);
+                  }
+                  tokens.add(new CompoundToken(base, startOffset + wordBeginIndex, len));
+
+                  baseBuilder.setLength(0);
+                  wordPartBuilder.setLength(0);
+                  inWord = false;
+                  inBase = false;
+                  isDerivSuffix = false;
+                  continue;
                 }
+                throw new IllegalStateException("Failed to parse Voikko word bases (c == ')', inBase == false)");
               }
-              offset += len;
+              
+              if (inBase) {
+                baseBuilder.append(c);
+              }
+              else if (inWord) {
+                wordPartBuilder.append(c);
+                wordEndIndex++;
+              }
+              else {
+                throw new IllegalStateException("Failed to parse Voikko word bases (c == '" + c + 
+                  "', inBase == false, inWord == false");
+              }
             }
           }
         }
