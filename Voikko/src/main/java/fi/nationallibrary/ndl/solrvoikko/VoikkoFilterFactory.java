@@ -33,6 +33,7 @@ public class VoikkoFilterFactory extends BaseTokenFilterFactory {
 
   private boolean expandCompounds = false;
   private boolean separateTokens = true; // Whether to create separate tokens (useful for indexing) or a string of tokens (useful for search)
+  private boolean allAnalysis = false; // Whether to use all analysis possibilities 
   private int minWordSize;
   private int minSubwordSize;
   private int maxSubwordSize;
@@ -47,10 +48,11 @@ public class VoikkoFilterFactory extends BaseTokenFilterFactory {
     maxSubwordSize = getInt("maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
     expandCompounds = getBoolean("expandCompounds", false);
     separateTokens = getBoolean("separateTokens", true);
+    allAnalysis = getBoolean("allAnalysis", false);
   }
 
   public TokenStream create(TokenStream input) {
-    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, separateTokens);
+    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, separateTokens, allAnalysis);
   }
   
   @Override

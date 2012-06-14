@@ -67,6 +67,7 @@ public class VoikkoFilter extends TokenFilter {
   private final int minSubwordSize;
   private final int maxSubwordSize;
   private final boolean separateTokens;
+  private final boolean allAnalysis;
 
   private final LinkedList<CompoundToken> tokens;
 
@@ -78,7 +79,7 @@ public class VoikkoFilter extends TokenFilter {
     }
   };
   
-  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean separateTokens) {
+  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean separateTokens, boolean allAnalysis) {
     super(input);
     this.tokens = new LinkedList<CompoundToken>();
     this.voikko = voikko;
@@ -87,6 +88,7 @@ public class VoikkoFilter extends TokenFilter {
     this.minSubwordSize = minSubwordSize;
     this.maxSubwordSize = maxSubwordSize;
     this.separateTokens = separateTokens;
+    this.allAnalysis = allAnalysis;
   }
 
   @Override
@@ -95,20 +97,31 @@ public class VoikkoFilter extends TokenFilter {
       assert current != null;
       CompoundToken token = tokens.removeFirst();
       restoreState(current); // keep all other attributes untouched
-      termAtt.setEmpty().append(token.txt);
-      if (!separateTokens) {
-        for (CompoundToken t: tokens) {
-          termAtt.append(' ');
-          termAtt.append(t.txt);
+      if (separateTokens) {
+        termAtt.setEmpty().append(token.txt);
+        if (token.startOffset != -1) {
+          offsetAtt.setOffset(token.startOffset, token.endOffset);
         }
-        tokens.clear();
-      }
-      offsetAtt.setOffset(token.startOffset, token.endOffset);
+      } else {
+        StringBuilder termBuilder = new StringBuilder();
+        termBuilder.append(token.txt);
+        while (!tokens.isEmpty()) {
+          token = tokens.getFirst();
+          if (token.startOffset < 1) {
+            break;
+          }
+          termBuilder.append(' ');
+          termBuilder.append(token.txt);
+          tokens.removeFirst();
+        }
+        termAtt.setEmpty().append(termBuilder);
+      } 
       posIncAtt.setPositionIncrement(0);
       return true;
     }
-    current = null; // not really needed, but for safety
+    current = null;
     if (input.incrementToken()) {
+      current = captureState();
       String word = termAtt.toString();
       int wordLen = word.length();
       if (wordLen < minWordSize || !word.matches("[a-zA-ZåäöÅÄÖ]+")) {
@@ -121,21 +134,25 @@ public class VoikkoFilter extends TokenFilter {
         analysisList = voikko.analyze(word);
         cache.put(word.toLowerCase(), analysisList);
       }
-      if (!analysisList.isEmpty()) {
-        // TODO: this will use only the first analysis, should we use all?
-        Analysis analysis = analysisList.get(0);
-
-        if (analysis.containsKey(BASEFORM_ATTR)) {
-          termAtt.setEmpty();
-          String baseform = analysis.get(BASEFORM_ATTR);
-          termAtt.append(baseform);
+      boolean first = true;
+      for (Analysis analysis: analysisList) {
+        if (!this.allAnalysis && !first) {
+          break;
         }
-        
+        if (analysis.containsKey(BASEFORM_ATTR)) {
+          String baseform = analysis.get(BASEFORM_ATTR);
+          if (first) {
+            termAtt.setEmpty().append(baseform);
+          } else {
+            tokens.add(new CompoundToken(baseform, -1, -1));
+          }
+        }
+        first = false;
+
         if (expandCompounds && analysis.containsKey(WORDBASES_ATTR)) {
           String wordbases = analysis.get(WORDBASES_ATTR);
           // Don't proceed unless we have more than one word
           if (wordbases.indexOf('+', 1) != -1) {
-            current = captureState();
             int startOffset = offsetAtt.startOffset();
             StringBuilder wordBuilder = new StringBuilder();
             int wordBeginIndex = 0;
@@ -215,9 +232,8 @@ public class VoikkoFilter extends TokenFilter {
             }
           }
         }
-        return true;
       }
-      return true;
+      return !analysisList.isEmpty();
     } 
     return false;
   }
