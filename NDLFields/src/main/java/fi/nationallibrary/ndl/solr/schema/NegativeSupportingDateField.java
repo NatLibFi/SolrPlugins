@@ -17,18 +17,28 @@
 
 package fi.nationallibrary.ndl.solr.schema;
 
-import org.apache.lucene.document.Fieldable;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.queries.function.docvalues.DocTermsIndexDocValues;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.FieldComparator;
 import org.apache.lucene.search.FieldComparatorSource;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
+import org.apache.lucene.queries.function.FunctionValues;
+import org.apache.lucene.queries.function.ValueSource;
+import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
+import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.CharsRef;
+import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.DateUtil;
 import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.schema.DateField;
+import org.apache.solr.response.TextResponseWriter;
+import org.apache.solr.schema.FieldType;
+import org.apache.solr.schema.PrimitiveFieldType;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.util.DateMathParser;
@@ -37,277 +47,336 @@ import java.io.IOException;
 import java.text.*;
 import java.util.*;
 
+// TODO: make a FlexibleDateField that can accept dates in multiple
+// formats, better for human entered dates.
+
+// TODO: make a DayField that only stores the day?
+
+
 /**
  * FieldType that supports dates with negative years.
+ * <p>
+ * Date Format for the XML, incoming and outgoing:
+ * </p>
+ * <blockquote>
+ * A date field shall be of the form 1995-12-31T23:59:59Z
+ * The trailing "Z" designates UTC time and is mandatory
+ * (See below for an explanation of UTC).
+ * Optional fractional seconds are allowed, as long as they do not end
+ * in a trailing 0 (but any precision beyond milliseconds will be ignored).
+ * All other parts are mandatory.
+ * </blockquote>
+ * <p>
+ * This format was derived to be standards compliant (ISO 8601) and is a more
+ * restricted form of the
+ * <a href="http://www.w3.org/TR/xmlschema-2/#dateTime-canonical-representation">canonical
+ * representation of dateTime</a> from XML schema part 2.  Examples...
+ * </p>
+ * <ul>
+ *   <li>1995-12-31T23:59:59Z</li>
+ *   <li>1995-12-31T23:59:59.9Z</li>
+ *   <li>1995-12-31T23:59:59.99Z</li>
+ *   <li>1995-12-31T23:59:59.999Z</li>
+ * </ul>
+ * <p>
+ * Note that DateField is lenient with regards to parsing fractional
+ * seconds that end in trailing zeros and will ensure that those values
+ * are indexed in the correct canonical format.
+ * </p>
+ * <p>
+ * This FieldType also supports incoming "Date Math" strings for computing
+ * values by adding/rounding internals of time relative either an explicit
+ * datetime (in the format specified above) or the literal string "NOW",
+ * ie: "NOW+1YEAR", "NOW/DAY", "1995-12-31T23:59:59.999Z+5MINUTES", etc...
+ * -- see {@link DateMathParser} for more examples.
+ * </p>
+ *
+ * <p>
+ * Explanation of "UTC"...
+ * </p>
+ * <blockquote>
+ * "In 1970 the Coordinated Universal Time system was devised by an
+ * international advisory group of technical experts within the International
+ * Telecommunication Union (ITU).  The ITU felt it was best to designate a
+ * single abbreviation for use in all languages in order to minimize
+ * confusion.  Since unanimous agreement could not be achieved on using
+ * either the English word order, CUT, or the French word order, TUC, the
+ * acronym UTC was chosen as a compromise."
+ * </blockquote>
+ *
+ *
+ * @see <a href="http://www.w3.org/TR/xmlschema-2/#dateTime">XML schema part 2</a>
+ *
  */
-public class NegativeSupportingDateField extends DateField {
+public class NegativeSupportingDateField extends PrimitiveFieldType {
 
-	/**
-	 * Needs to be overridden because this method calls parseDate
-	 * which is a static method in DateField
-	 */
-	@Override
-	public Date parseMath(Date now, String val) {
+  public static TimeZone UTC = TimeZone.getTimeZone("UTC");
+
+  /** 
+   * No longer used
+   * @deprecated use DateMathParser.DEFAULT_MATH_TZ
+   * @see DateMathParser#DEFAULT_MATH_TZ
+   */
+  protected static final TimeZone MATH_TZ = DateMathParser.DEFAULT_MATH_TZ;
+  /** 
+   * No longer used
+   * @deprecated use DateMathParser.DEFAULT_MATH_LOCALE
+   * @see DateMathParser#DEFAULT_MATH_LOCALE
+   */
+  protected static final Locale MATH_LOCALE = DateMathParser.DEFAULT_MATH_LOCALE;
+
+  /** 
+   * Fixed TimeZone (UTC) needed for parsing/formating Dates in the 
+   * canonical representation.
+   */
+  protected static final TimeZone CANONICAL_TZ = UTC;
+  /** 
+   * Fixed Locale needed for parsing/formating Milliseconds in the 
+   * canonical representation.
+   */
+  protected static final Locale CANONICAL_LOCALE = Locale.ROOT;
+  
+  // The XML (external) date format will sort correctly, except if
+  // fractions of seconds are present (because '.' is lower than 'Z').
+  // The easiest fix is to simply remove the 'Z' for the internal
+  // format.
+  
+  protected static String NOW = "NOW";
+  protected static char Z = 'Z';
+  private static char[] Z_ARRAY = new char[] {Z};
+  
+  
+  @Override
+  public String toInternal(String val) {
+    return toInternal(parseMath(null, val));
+  }
+
+  /**
+   * Parses a String which may be a date (in the standard format)
+   * followed by an optional math expression.
+   * @param now an optional fixed date to use as "NOW" in the DateMathParser
+   * @param val the string to parse
+   */
+  public Date parseMath(Date now, String val) {
 		// Ugly hax
 		if (val.length() == 8)
 			val = "AD" + val.substring(0, 4) + "-" + val.substring(4, 6) + "-"
 					+ val.substring(6, 8);
 		if (val.length() == 12)
 			val += "T00:00:00Z";
-
+		
 		String math = null;
-		final DateMathParser p = new DateMathParser(MATH_TZ, MATH_LOCALE);
+    final DateMathParser p = new DateMathParser();
+    
+    if (null != now) p.setNow(now);
+    
+    if (val.startsWith(NOW)) {
+      math = val.substring(NOW.length());
+    } else {
+      final int zz = val.indexOf(Z);
+      if (0 < zz) {
+        math = val.substring(zz+1);
+        try {
+          // p.setNow(toObject(val.substring(0,zz)));
+          p.setNow(parseDate(val.substring(0,zz+1)));
+        } catch (ParseException e) {
+          throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                                   "Invalid Date in Date Math String:'"
+                                   +val+'\'',e);
+        }
+      } else {
+        throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                                 "Invalid Date String:'" +val+'\'');
+      }
+    }
 
-		if (null != now)
-			p.setNow(now);
+    if (null == math || math.equals("")) {
+      return p.getNow();
+    }
+    
+    try {
+      return p.parseMath(math);
+    } catch (ParseException e) {
+      throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                               "Invalid Date Math String:'" +val+'\'',e);
+    }
+  }
 
-		if (val.startsWith(NOW)) {
-			math = val.substring(NOW.length());
-		} else {
-			try {
-				p.setNow(eraAwareParseDate(val));
-			} catch (ParseException e) {
-				throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-						"Invalid Date in Date Math String:'" + val + '\'', e);
-			}
-		}
+  public IndexableField createField(SchemaField field, Object value, float boost) {
+    // Convert to a string before indexing
+    if(value instanceof Date) {
+      value = toInternal( (Date)value ) + Z;
+    }
+    return super.createField(field, value, boost);
+  }
+  
+  public String toInternal(Date val) {
+    return formatDate(val);
+  }
 
-		if (null == math || math.equals("")) {
-			return p.getNow();
-		}
+  @Override
+  public String indexedToReadable(String indexedForm) {
+    return indexedForm + Z;
+  }
 
-		try {
-			return p.parseMath(math);
-		} catch (ParseException e) {
-			throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-					"Invalid Date Math String:'" + val + '\'', e);
-		}
-	}
+  @Override
+  public CharsRef indexedToReadable(BytesRef input, CharsRef charsRef) {
+    UnicodeUtil.UTF8toUTF16(input, charsRef);
+    charsRef.append(Z_ARRAY, 0, 1);
+    return charsRef;
+  }
 
-	public Date toObject(String indexedForm) throws java.text.ParseException {
-		return eraAwareParseDate(indexedToReadable(indexedForm));
-	}
+  @Override
+  public String toExternal(IndexableField f) {
+    return indexedToReadable(f.stringValue());
+  }
 
-	@Override
-	public Date toObject(Fieldable f) {
-		try {
-			return eraAwareParseDate(toExternal(f));
-		} catch (ParseException ex) {
-			throw new RuntimeException(ex);
-		}
-	}
+  public Date toObject(String indexedForm) throws java.text.ParseException {
+    return parseDate(indexedToReadable(indexedForm));
+  }
+
+  @Override
+  public Date toObject(IndexableField f) {
+    try {
+      return parseDate( toExternal(f) );
+    }
+    catch( ParseException ex ) {
+      throw new RuntimeException( ex );
+    }
+  }
+
+  @Override
+  public SortField getSortField(SchemaField field,boolean reverse) {
+    return getStringSort(field,reverse);
+  }
+  
+  @Override
+  public void write(TextResponseWriter writer, String name, IndexableField f) throws IOException {
+    writer.writeDate(name, toExternal(f));
+  }
+
+  /**
+   * Returns a formatter that can be use by the current thread if needed to
+   * convert Date objects to the Internal representation.
+   *
+   * Only the <tt>format(Date)</tt> can be used safely.
+   * 
+   * @deprecated - use formatDate(Date) instead
+   */
+  @Deprecated
+  protected DateFormat getThreadLocalDateFormat() {
+    return fmtThreadLocal.get();
+  }
+
+  /**
+   * Thread safe method that can be used by subclasses to format a Date
+   * using the Internal representation.
+   */
+  protected String formatDate(Date d) {
+    return fmtThreadLocal.get().format(d);
+  }
+
+  /**
+   * Return the standard human readable form of the date
+   */
+  public static String formatExternal(Date d) {
+    return fmtThreadLocal.get().format(d) + 'Z';
+  }
+
+  /**
+   * @see #formatExternal
+   */
+  public String toExternal(Date d) {
+    return formatExternal(d);
+  }
+
+  /**
+   * Thread safe method that can be used by subclasses to parse a Date
+   * that is already in the internal representation
+   */
+   public static Date parseDate(String s) throws ParseException {
+     return fmtThreadLocal.get().parse(s);
+   }
+
+  /** Parse a date string in the standard format, or any supported by DateUtil.parseDate */
+   public Date parseDateLenient(String s, SolrQueryRequest req) throws ParseException {
+     // request could define timezone in the future
+     try {
+       return fmtThreadLocal.get().parse(s);
+     } catch (Exception e) {
+       return DateUtil.parseDate(s);
+     }
+   }
+
+  /**
+   * Parses a String which may be a date
+   * followed by an optional math expression.
+   * @param now an optional fixed date to use as "NOW" in the DateMathParser
+   * @param val the string to parse
+   */
+  public Date parseMathLenient(Date now, String val, SolrQueryRequest req) {
+    String math = null;
+    final DateMathParser p = new DateMathParser();
+
+    if (null != now) p.setNow(now);
+
+    if (val.startsWith(NOW)) {
+      math = val.substring(NOW.length());
+    } else {
+      final int zz = val.indexOf(Z);
+      if (0 < zz) {
+        math = val.substring(zz+1);
+        try {
+          // p.setNow(toObject(val.substring(0,zz)));
+          p.setNow(parseDateLenient(val.substring(0,zz+1), req));
+        } catch (ParseException e) {
+          throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                                   "Invalid Date in Date Math String:'"
+                                   +val+'\'',e);
+        }
+      } else {
+        throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                                 "Invalid Date String:'" +val+'\'');
+      }
+    }
+
+    if (null == math || math.equals("")) {
+      return p.getNow();
+    }
+
+    try {
+      return p.parseMath(math);
+    } catch (ParseException e) {
+      throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
+                               "Invalid Date Math String:'" +val+'\'',e);
+    }
+  }
+
+
 	
-	@Override 
-	public SortField getSortField(SchemaField field, boolean reverse) { 
-		 return new SortField(field.getName(), comparatorSource, reverse); 
-	}
+  /**
+   * Thread safe DateFormat that can <b>format</b> in the canonical
+   * ISO8601 date format, not including the trailing "Z" (since it is
+   * left off in the internal indexed values)
+   */
+  private final static ThreadLocalDateFormat fmtThreadLocal
+    = new ThreadLocalDateFormat(new NegativeSupportingDateFormat());
+  
+  private static class NegativeSupportingDateFormat extends SimpleDateFormat {
+    
+    protected NumberFormat millisParser
+      = NumberFormat.getIntegerInstance(CANONICAL_LOCALE);
 
-	private static FieldComparatorSource comparatorSource = new FieldComparatorSource() {
-		@Override
-		public FieldComparator<String> newComparator(final String fieldname,
-				final int numHits, int sortPos, boolean reversed)
-				throws IOException {
-			return new EraAwareFieldComparator(numHits, fieldname);
-		}
+    protected NumberFormat millisFormat = new DecimalFormat(".###", 
+      new DecimalFormatSymbols(CANONICAL_LOCALE));
 
-		class EraAwareFieldComparator extends FieldComparator<String> {
-			private String[] values;
-			private String[] currentReaderValues;
-			private final String field;
-			private String bottom;
+    public NegativeSupportingDateFormat() {
+      super("Gyyyy-MM-dd'T'HH:mm:ss", CANONICAL_LOCALE);
+      this.setTimeZone(CANONICAL_TZ);
+    }
 
-			EraAwareFieldComparator(int numHits, String field) {
-				values = new String[numHits];
-				this.field = field;
-			}
-
-			@Override
-			public int compare(int slot1, int slot2) {
-				final String val1 = values[slot1];
-				final String val2 = values[slot2];
-				
-				return collator.compare(val1, val2);
-			}
-
-			@Override
-			public int compareBottom(int doc) {
-				final String val2 = currentReaderValues[doc];
-				
-				return collator.compare(bottom, val2);
-			}
-
-			@Override
-			public void copy(int slot, int doc) {
-				values[slot] = currentReaderValues[doc];
-			}
-
-			@Override
-			public void setNextReader(IndexReader reader, int docBase)
-					throws IOException {
-				currentReaderValues = FieldCache.DEFAULT.getStrings(reader,
-						field);
-			}
-
-			@Override
-			public void setBottom(final int bottom) {
-				this.bottom = values[bottom];
-			}
-
-			@Override
-			public String value(int slot) {
-				return values[slot];
-			}
-
-			@Override
-			public int compareValues(String val1, String val2) {
-				return collator.compare(val1, val2);
-			}
-		}
-	};
-
-	/**
-	 * Thread safe method that can be used by subclasses to format a Date using
-	 * the Internal representation.
-	 */
-	@Override
-	protected String formatDate(Date d) {
-		return fmtThreadLocal.get().format(d);
-	}
-
-	/**
-	 * Return the standard human readable form of the date
-	 */
-	@Override
-	public String toExternal(Date d) {
-		return fmtThreadLocal.get().format(d) + Z;
-	}
-
-	/**
-	 * Thread safe method that can be used by subclasses to parse a Date that is
-	 * already in the internal representation
-	 */
-	protected Date eraAwareParseDate(String s) throws ParseException {
-		return fmtThreadLocal.get().parse(s);
-	}
-
-	/**
-	 * Parse a date string in the standard format, or any supported by
-	 * DateUtil.parseDate
-	 */
-	@Override
-	public Date parseDateLenient(String s, SolrQueryRequest req)
-			throws ParseException {
-		// request could define timezone in the future
-		try {
-			return fmtThreadLocal.get().parse(s);
-		} catch (Exception e) {
-			return DateUtil.parseDate(s);
-		}
-	}
-
-	/** EraAwareDateField specific range query */
-
-	@Override
-	public Query getRangeQuery(QParser parser, SchemaField sf, Date part1,
-			Date part2, boolean minInclusive, boolean maxInclusive) {
-		return new TermRangeQuery(sf.getName(), part1 == null ? null
-				: toInternal(part1), part2 == null ? null : toInternal(part2),
-				minInclusive, maxInclusive, collator);
-	}
-
-	@Override
-	public Query getRangeQuery(QParser parser, SchemaField field, String part1,
-			String part2, boolean minInclusive, boolean maxInclusive) {
-		// Use custom collator
-		return new TermRangeQuery(field.getName(), part1 == null ? null
-				: toInternal(part1), part2 == null ? null : toInternal(part2),
-				minInclusive, maxInclusive, collator);
-	}
-
-	protected static Collator collator = new Collator() {
-		@Override
-		public int compare(String source, String target) {
-			if (source == null || source.length() == 0) {
-				if (target == null || target.length() == 0) {
-					return 0;
-				}
-				return -1;
-			} else if (target == null || target.length() == 0) {
-				return 1;
-			}
-			
-			boolean inverse = false;
-			
-			int sourceIndex = source.indexOf('-');
-			int targetIndex = target.indexOf('-');
-			
-			if(sourceIndex == 0) {
-				if(targetIndex == 0) {
-					sourceIndex = source.indexOf('-',1);
-					targetIndex = target.indexOf('-',1);
-					inverse = true;
-				}
-				else return -1;
-			}
-			else if(targetIndex == 0)
-				return 1;
-			
-			// Both are either positive or negative with varying amounts of digits
-			// so we need to parse them as numbers
-			int sourceYear = Integer.parseInt(source.substring(0,sourceIndex));
-			int targetYear = Integer.parseInt(target.substring(0,targetIndex));
-			
-			if(sourceYear < targetYear)
-				return -1;
-			if(sourceYear > targetYear)
-				return 1;
-			
-			// Years match, so a lexicographical compare should work 
-			if(inverse)
-				return target.compareTo(source);
-			else 
-				return source.compareTo(target);
-		}
-
-		@Override
-		public CollationKey getCollationKey(String source) {
-			throw new RuntimeException("Collation keys not supported");
-		}
-
-		@Override
-		public int hashCode() {
-			return 0;
-		}
-	};
-
-	/**
-	 * Thread safe DateFormat that can <b>format</b> in the canonical ISO8601
-	 * date format, not including the trailing "Z" (since it is left off in the
-	 * internal indexed values). Supports negative years.
-	 */
-	private final static ThreadLocalDateFormat fmtThreadLocal = new ThreadLocalDateFormat(
-			new NegativeSupportingDateFormat());
-	
-	private static class NegativeSupportingDateFormat extends SimpleDateFormat {
-	  
-	  protected static final Locale _CANONICAL_LOCALE = Locale.US;
-	  public static TimeZone _UTC = TimeZone.getTimeZone("UTC");
-	  protected static final TimeZone _CANONICAL_TZ = _UTC;
-	  
-		protected NumberFormat millisParser = NumberFormat
-				.getIntegerInstance(_CANONICAL_LOCALE);
-
-		protected NumberFormat millisFormat = new DecimalFormat(".###",
-				new DecimalFormatSymbols(_CANONICAL_LOCALE));
-
-		public NegativeSupportingDateFormat() {
-			super("Gyyyy-MM-dd'T'HH:mm:ss", _CANONICAL_LOCALE);
-			this.setTimeZone(_CANONICAL_TZ);
-		}
-
-		@Override
-		public Date parse(String i, ParsePosition p) {
-
+    @Override
+    public Date parse(String i, ParsePosition p) {
 			/*
 			 * Convert canonical dateTime years to era format Eg.
 			 * -333-01-01T00:00:00 -> BC333-01-01T00:00:00 1999-06-01T00:00:00
@@ -340,9 +409,9 @@ public class NegativeSupportingDateField extends DateField {
 			return d;
 		}
 
-		@Override
-		public StringBuffer format(Date d, StringBuffer toAppendTo,
-				FieldPosition pos) {
+    @Override
+    public StringBuffer format(Date d, StringBuffer toAppendTo,
+                               FieldPosition pos) {
 			/*
 			 * delegate to SimpleDateFormat for easy stuff 
 			 * Replace BC and AD with '-' and nothing, respectively
@@ -368,10 +437,10 @@ public class NegativeSupportingDateField extends DateField {
 				pos.setEndIndex(toAppendTo.length());
 			}
 			return toAppendTo;
-		}
+    }
 
-		@Override
-		public Object clone() {
+    @Override
+    public DateFormat clone() {
 		  NegativeSupportingDateFormat c = (NegativeSupportingDateFormat) super
 					.clone();
 			c.millisParser = NumberFormat.getIntegerInstance(CANONICAL_LOCALE);
@@ -379,19 +448,121 @@ public class NegativeSupportingDateField extends DateField {
 					new DecimalFormatSymbols(CANONICAL_LOCALE));
 			return c;
 		}
-	}
+  }
+  
+  private static class ThreadLocalDateFormat extends ThreadLocal<DateFormat> {
+    DateFormat proto;
+    public ThreadLocalDateFormat(DateFormat d) {
+      super();
+      proto = d;
+    }
+    @Override
+    protected DateFormat initialValue() {
+      return (DateFormat) proto.clone();
+    }
+  }
 
-	private static class ThreadLocalDateFormat extends ThreadLocal<DateFormat> {
-		DateFormat proto;
+  @Override
+  public ValueSource getValueSource(SchemaField field, QParser parser) {
+    field.checkFieldCacheSource(parser);
+    return new DateFieldSource(field.getName(), field.getType());
+  }
 
-		public ThreadLocalDateFormat(DateFormat d) {
-			super(); 
-			proto = d; 
-		}
+  /** DateField specific range query */
+  public Query getRangeQuery(QParser parser, SchemaField sf, Date part1, Date part2, boolean minInclusive, boolean maxInclusive) {
+    return TermRangeQuery.newStringRange(
+            sf.getName(),
+            part1 == null ? null : toInternal(part1),
+            part2 == null ? null : toInternal(part2),
+            minInclusive, maxInclusive);
+  }
 
-		@Override
-		protected DateFormat initialValue() {
-			return (DateFormat) proto.clone();
-		}
-	}
+}
+
+
+
+class DateFieldSource extends FieldCacheSource {
+  // NOTE: this is bad for serialization... but we currently need the fieldType for toInternal()
+  FieldType ft;
+
+  public DateFieldSource(String name, FieldType ft) {
+    super(name);
+    this.ft = ft;
+  }
+
+  @Override
+  public String description() {
+    return "date(" + field + ')';
+  }
+
+  @Override
+  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    return new DocTermsIndexDocValues(this, readerContext, field) {
+      @Override
+      protected String toTerm(String readableValue) {
+        // needed for frange queries to work properly
+        return ft.toInternal(readableValue);
+      }
+
+      @Override
+      public float floatVal(int doc) {
+        return (float)intVal(doc);
+      }
+
+      @Override
+      public int intVal(int doc) {
+        int ord=termsIndex.getOrd(doc);
+        return ord;
+      }
+
+      @Override
+      public long longVal(int doc) {
+        return (long)intVal(doc);
+      }
+
+      @Override
+      public double doubleVal(int doc) {
+        return (double)intVal(doc);
+      }
+
+      @Override
+      public String strVal(int doc) {
+        int ord=termsIndex.getOrd(doc);
+        if (ord == 0) {
+          return null;
+        } else {
+          final BytesRef br = termsIndex.lookup(ord, spare);
+          return ft.indexedToReadable(br, spareChars).toString();
+        }
+      }
+
+      @Override
+      public Object objectVal(int doc) {
+        int ord=termsIndex.getOrd(doc);
+        if (ord == 0) {
+          return null;
+        } else {
+          final BytesRef br = termsIndex.lookup(ord, new BytesRef());
+          return ft.toObject(null, br);
+        }
+      }
+
+      @Override
+      public String toString(int doc) {
+        return description() + '=' + intVal(doc);
+      }
+    };
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof DateFieldSource
+            && super.equals(o);
+  }
+
+  private static int hcode = DateFieldSource.class.hashCode();
+  @Override
+  public int hashCode() {
+    return hcode + super.hashCode();
+  };
 }

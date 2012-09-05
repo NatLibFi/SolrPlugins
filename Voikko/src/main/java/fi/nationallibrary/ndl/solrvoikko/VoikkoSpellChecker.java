@@ -27,6 +27,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.spelling.SolrSpellChecker;
+import org.apache.solr.spelling.SpellingOptions;
 import org.apache.solr.spelling.SpellingResult;
 
 /**
@@ -43,19 +44,18 @@ public class VoikkoSpellChecker extends SolrSpellChecker {
 	}
 
 	@Override
-	public SpellingResult getSuggestions(Collection<Token> arg0,
-			IndexReader arg1, int arg2, boolean arg3, boolean arg4)
-			throws IOException {
-		SpellingResult result = new SpellingResult();
-		// TODO
-		return result;
-	}
-
-	@Override
 	public void reload(SolrCore arg0, SolrIndexSearcher arg1)
 			throws IOException {
 		// TODO Auto-generated method stub
 
 	}
+
+  @Override
+  public SpellingResult getSuggestions(SpellingOptions options)
+      throws IOException {
+    SpellingResult result = new SpellingResult();
+    // TODO
+    return result;
+  }
 
 }

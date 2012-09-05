@@ -28,14 +28,14 @@
     <dependency>
     	<groupId>org.apache.solr</groupId>
     	<artifactId>solr-solrj</artifactId>
-    	<version>3.5.0</version>
+    	<version>4.0.0-BETA</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
     <dependency>
     	<groupId>org.apache.solr</groupId>
     	<artifactId>solr-core</artifactId>
-    	<version>3.5.0</version>
+    	<version>4.0.0-BETA</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>

@@ -17,7 +17,7 @@
 
 package fi.nationallibrary.ndl.solr.request;
 
-import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.*;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
@@ -95,10 +95,10 @@ public class RangeFieldFacets extends SimpleFacets {
       facetResponse.add("facet_ranges", getFacetRangeCounts());
 
     } catch (IOException e) {
-      SolrException.logOnce(SolrCore.log, "Exception during facet counts", e);
+      SolrException.log(SolrCore.log, "Exception during facet counts", e);
       throw new SolrException(ErrorCode.SERVER_ERROR, e);
     } catch (ParseException e) {
-      SolrException.logOnce(SolrCore.log, "Exception during facet counts", e);
+      SolrException.log(SolrCore.log, "Exception during facet counts", e);
       throw new SolrException(ErrorCode.BAD_REQUEST, e);
     }
     return facetResponse;
@@ -227,7 +227,7 @@ public class RangeFieldFacets extends SimpleFacets {
       }
     } 
     else if (ft instanceof DateField) {
-      calc = new DateRangeEndpointCalculator(sf, NOW);
+      calc = new DateRangeEndpointCalculator(sf, new Date());
     } else if (ft instanceof SortableIntField) {
       calc = new IntegerRangeEndpointCalculator(sf);
     } else if (ft instanceof SortableLongField) {

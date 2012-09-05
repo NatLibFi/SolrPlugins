@@ -31,10 +31,11 @@ import org.apache.lucene.analysis.TokenStream;
  */
 public class VoikkoAnalyzer extends Analyzer {
 
-	@Override
-	public TokenStream tokenStream(String arg0, Reader arg1) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  protected TokenStreamComponents createComponents(String fieldName,
+      Reader reader) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

@@ -21,7 +21,7 @@ package fi.nationallibrary.ndl.solrvoikko;
 
 import java.util.Map;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.solr.analysis.BaseTokenFilterFactory;
+import org.apache.lucene.analysis.util.TokenFilterFactory;
 import org.puimula.libvoikko.Voikko;
 
 /**
@@ -29,7 +29,7 @@ import org.puimula.libvoikko.Voikko;
  * @author ere.maijala@helsinki.fi
  *
  */
-public class VoikkoFilterFactory extends BaseTokenFilterFactory {
+public class VoikkoFilterFactory extends TokenFilterFactory {
 
   private boolean expandCompounds = false;
   private boolean separateTokens = true; // Whether to create separate tokens (useful for indexing) or a string of tokens (useful for search)
