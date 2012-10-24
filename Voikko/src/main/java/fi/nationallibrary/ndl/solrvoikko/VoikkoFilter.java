@@ -134,6 +134,12 @@ public class VoikkoFilter extends TokenFilter {
         analysisList = voikko.analyze(word);
         cache.put(word.toLowerCase(), analysisList);
       }
+      
+      if (analysisList.isEmpty()) {
+        //tokens.add(new CompoundToken(word, -1, -1));
+        return true;
+      }
+      
       boolean first = true;
       for (Analysis analysis: analysisList) {
         if (!this.allAnalysis && !first) {

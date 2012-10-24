@@ -52,9 +52,14 @@ public class TestApp {
       voikko = new Voikko("fi-x-morphoid");
       
       String text;
+      System.out.println("Enter word or phrase");
       while ((text = stdin.readLine()) != null) {
         List<Analysis> analysisList = voikko.analyze(text);
+        if (analysisList.isEmpty()) {
+          System.out.println("No analysis available");
+        }
         for (Analysis analysis : analysisList) {
+          System.out.println("Analysis:");
           if (analysis.containsKey(BASEFORM)) {
             WordComponent component = new WordComponent();
             component.component = analysis.get(BASEFORM);
