@@ -17,19 +17,19 @@ package fi.nationallibrary.ndl.solr.schema;
  */
 
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.index.FieldInfo.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.*;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.response.TextResponseWriter;
-import org.apache.solr.response.XMLWriter;
 import org.apache.solr.schema.AbstractSubTypeFieldType;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,30 +54,31 @@ public class RangeField extends AbstractSubTypeFieldType {
   }
 
   @Override
-  public IndexableField[] createFields(SchemaField field, Object value, float boost) {
+  public List<IndexableField> createFields(SchemaField field, Object value, float boost) {
   	String externalVal = value.toString();
 	  int separatorIndex = externalVal.indexOf(separator);
     if(separatorIndex == -1) {
-	    throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Invalid range, provide start and end range separated by ',' or with specified separator.");
+	    throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Invalid range \"" + externalVal + "\", provide start and end range separated by ',' or with specified separator.");
     }
+
+    List<IndexableField> f = new ArrayList<IndexableField>();
     
-    IndexableField[] f = new IndexableField[(field.indexed() ? 2 : 0) + (field.stored() ? 1 : 0)];
     if (field.indexed()) {
-      f[0] = subField(field, 0)
+      f.add(subField(field, 0)
           .createField(
               externalVal.substring(0,separatorIndex), // Range start 
-              boost);
-      f[1] = subField(field, 1)
+              boost));
+      f.add(subField(field, 1)
           .createField(
               externalVal.substring(separatorIndex+1,externalVal.length()), // Range end 
-              boost);
+              boost));
     }
 
     if (field.stored()) {
       String storedVal = externalVal;  // normalize or not?
       FieldType customType = new FieldType();
       customType.setStored(true);
-      f[f.length - 1] = createField(field.getName(), storedVal, customType, 1f);
+      f.add(createField(field.getName(), storedVal, customType, 1f));
     }
     return f;
   }

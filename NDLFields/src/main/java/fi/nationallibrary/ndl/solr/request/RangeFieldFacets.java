@@ -97,14 +97,14 @@ public class RangeFieldFacets extends SimpleFacets {
     } catch (IOException e) {
       SolrException.log(SolrCore.log, "Exception during facet counts", e);
       throw new SolrException(ErrorCode.SERVER_ERROR, e);
-    } catch (ParseException e) {
+    } catch (SyntaxError e) {
       SolrException.log(SolrCore.log, "Exception during facet counts", e);
       throw new SolrException(ErrorCode.BAD_REQUEST, e);
     }
     return facetResponse;
   }
 
-  public NamedList getFacetRangeCounts() throws IOException, ParseException {
+  public NamedList getFacetRangeCounts() throws IOException, SyntaxError {
     final NamedList resOuter = new SimpleOrderedMap();
     final String[] fields = params.getParams(FacetParams.FACET_RANGE);
 
@@ -118,7 +118,7 @@ public class RangeFieldFacets extends SimpleFacets {
   }
   
 
-  void parseParams(String type, String param) throws ParseException, IOException {
+  protected void parseParams(String type, String param) throws SyntaxError, IOException {
     localParams = QueryParsing.getLocalParams(param, req.getParams());
     base = docs;
     facetValue = param;
@@ -181,7 +181,7 @@ public class RangeFieldFacets extends SimpleFacets {
   }
   
   void getFacetRangeCounts(String facetRange, NamedList resOuter)
-      throws IOException, ParseException {
+      throws IOException, SyntaxError {
 
     final IndexSchema schema = searcher.getSchema();
 

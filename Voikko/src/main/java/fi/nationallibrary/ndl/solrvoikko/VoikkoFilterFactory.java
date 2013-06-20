@@ -39,16 +39,15 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
   private int maxSubwordSize;
   private Voikko voikko;
 
-  @Override
-  public void init(Map<String, String> args) {
-    super.init(args);
+  public VoikkoFilterFactory(Map<String, String> args) {
+    super(args);
     voikko = new Voikko("fi-x-morphoid");
-    minWordSize = getInt("minWordSize", VoikkoFilter.DEFAULT_MIN_WORD_SIZE);
-    minSubwordSize = getInt("minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
-    maxSubwordSize = getInt("maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
-    expandCompounds = getBoolean("expandCompounds", false);
-    separateTokens = getBoolean("separateTokens", true);
-    allAnalysis = getBoolean("allAnalysis", false);
+    minWordSize = getInt(args, "minWordSize", VoikkoFilter.DEFAULT_MIN_WORD_SIZE);
+    minSubwordSize = getInt(args, "minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
+    maxSubwordSize = getInt(args, "maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
+    expandCompounds = getBoolean(args, "expandCompounds", false);
+    separateTokens = getBoolean(args, "separateTokens", true);
+    allAnalysis = getBoolean(args, "allAnalysis", false);
   }
 
   public TokenStream create(TokenStream input) {

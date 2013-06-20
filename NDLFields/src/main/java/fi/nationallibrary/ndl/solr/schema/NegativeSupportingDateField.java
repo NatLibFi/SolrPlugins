@@ -18,18 +18,13 @@
 package fi.nationallibrary.ndl.solr.schema;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.queries.function.docvalues.DocTermsIndexDocValues;
-import org.apache.lucene.search.FieldCache;
-import org.apache.lucene.search.FieldComparator;
-import org.apache.lucene.search.FieldComparatorSource;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.UnicodeUtil;
@@ -480,8 +475,7 @@ public class NegativeSupportingDateField extends PrimitiveFieldType {
 }
 
 
-
-class DateFieldSource extends FieldCacheSource {
+class DateFieldSource extends org.apache.lucene.queries.function.valuesource.FieldCacheSource {
   // NOTE: this is bad for serialization... but we currently need the fieldType for toInternal()
   FieldType ft;
 
@@ -531,8 +525,8 @@ class DateFieldSource extends FieldCacheSource {
         if (ord == 0) {
           return null;
         } else {
-          final BytesRef br = termsIndex.lookup(ord, spare);
-          return ft.indexedToReadable(br, spareChars).toString();
+          termsIndex.lookupOrd(ord, spare);
+          return ft.indexedToReadable(spare, spareChars).toString();
         }
       }
 
@@ -542,8 +536,8 @@ class DateFieldSource extends FieldCacheSource {
         if (ord == 0) {
           return null;
         } else {
-          final BytesRef br = termsIndex.lookup(ord, new BytesRef());
-          return ft.toObject(null, br);
+          termsIndex.lookupOrd(ord, spare);
+          return ft.toObject(null, spare);
         }
       }
 
