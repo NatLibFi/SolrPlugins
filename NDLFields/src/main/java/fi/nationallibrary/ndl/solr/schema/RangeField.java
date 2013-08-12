@@ -64,11 +64,11 @@ public class RangeField extends AbstractSubTypeFieldType {
     List<IndexableField> f = new ArrayList<IndexableField>();
     
     if (field.indexed()) {
-      f.add(subField(field, 0)
+      f.add(subField(field, 0, schema)
           .createField(
               externalVal.substring(0,separatorIndex), // Range start 
               boost));
-      f.add(subField(field, 1)
+      f.add(subField(field, 1, schema)
           .createField(
               externalVal.substring(separatorIndex+1,externalVal.length()), // Range end 
               boost));
@@ -86,8 +86,8 @@ public class RangeField extends AbstractSubTypeFieldType {
 
   @Override
   public Query getRangeQuery(QParser parser, SchemaField field, String start, String end, boolean minInclusive, boolean maxInclusive) {
-	  SchemaField startField = subField(field, 0);
-	  SchemaField endField = subField(field, 1);
+	  SchemaField startField = subField(field, 0, schema);
+	  SchemaField endField = subField(field, 1, schema);
     BooleanQuery result = new BooleanQuery();
      
     result.add(startField.getType().getRangeQuery(parser, startField, null, end, minInclusive, maxInclusive), BooleanClause.Occur.MUST);
@@ -118,11 +118,11 @@ public class RangeField extends AbstractSubTypeFieldType {
 
   public SchemaField getSubField(SchemaField field) {
     // Default to first field
-    return subField(field, 0);
+    return subField(field, 0, schema);
   }
   
   public SchemaField getSubField(SchemaField field, int n) {
-    return subField(field, n);
+    return subField(field, n, schema);
   }
   
   @Override
