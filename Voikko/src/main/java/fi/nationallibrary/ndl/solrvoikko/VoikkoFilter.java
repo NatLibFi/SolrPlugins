@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
@@ -127,10 +128,8 @@ public class VoikkoFilter extends TokenFilter {
       if (wordLen < minWordSize || !word.matches("[a-zA-ZåäöÅÄÖ]+")) {
         return true;
       }
-      List<Analysis> analysisList = null;
-      if (cache.containsKey(word.toLowerCase())) {
-        analysisList = cache.get(word.toLowerCase());
-      } else {
+      List<Analysis> analysisList = cache.get(word.toLowerCase());
+      if (analysisList == null) {
         analysisList = voikko.analyze(word);
         cache.put(word.toLowerCase(), analysisList);
       }
@@ -204,11 +203,20 @@ public class VoikkoFilter extends TokenFilter {
                   if (isDerivSuffix) {
                     base = wordBuilder.toString() + baseBuilder.toString();
                     len = wordBuilder.length() + wordPartBuilder.length();
+                    int baseLen = base.length();
+                    if (baseLen < len) {
+                      len = baseLen;
+                    }
+                    wordBeginIndex = 0;
                     wordBuilder.append(wordPartBuilder);
                   }
                   else {
                     base = baseBuilder.toString();
                     len = wordPartBuilder.length();
+                    int baseLen = base.length();
+                    if (baseLen < len) {
+                      len = baseLen;
+                    }
                     wordBeginIndex = wordEndIndex - len;
                     wordBuilder.append(wordPartBuilder);
                   }

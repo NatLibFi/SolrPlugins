@@ -87,6 +87,9 @@ public class TestApp {
     boolean inWord = false;
     boolean inBase = false;
     boolean isDerivSuffix = false;
+    System.out.println("");
+    System.out.println("wordbases: " + wordbases.toString());
+    
     for (int i = 0; i < wordbases.length(); i++) {
       char c = wordbases.charAt(i);
       if (c == '+') {
@@ -120,11 +123,19 @@ public class TestApp {
         if (inBase) {
           WordComponent wc = new WordComponent();
           if (isDerivSuffix) {
+            System.out.println("isDerivSuffix");
+            System.out.println("wordBuilder: " + wordBuilder.toString());
+            System.out.println("baseBuilder: " + baseBuilder.toString());
+            System.out.println("wordPartBuilder: " + wordPartBuilder.toString());
             wc.component = wordBuilder.toString() + baseBuilder.toString();
             wc.lengthInOriginal = wordBuilder.length() + wordPartBuilder.length();
+            wordBeginIndex = 0;
             wordBuilder.append(wordPartBuilder);
           }
           else {
+            System.out.println("nonderiv");
+            System.out.println("baseBuilder: " + baseBuilder.toString());
+            System.out.println("wordPartBuilder: " + wordPartBuilder.toString());
             wc.component = baseBuilder.toString();
             wc.lengthInOriginal = wordPartBuilder.length();
             wordBeginIndex = wordEndIndex - wc.lengthInOriginal;
