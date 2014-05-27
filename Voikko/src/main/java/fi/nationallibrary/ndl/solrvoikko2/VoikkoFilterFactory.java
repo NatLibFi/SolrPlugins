@@ -17,7 +17,7 @@
  *********************************************************************************/
 
 
-package fi.nationallibrary.ndl.solrvoikko;
+package fi.nationallibrary.ndl.solrvoikko2;
 
 import java.util.Map;
 import org.apache.lucene.analysis.TokenStream;
@@ -32,7 +32,6 @@ import org.puimula.libvoikko.Voikko;
 public class VoikkoFilterFactory extends TokenFilterFactory {
 
   private boolean expandCompounds = false;
-  private boolean separateTokens = true; // Whether to create separate tokens (useful for indexing) or a string of tokens (useful for search)
   private boolean allAnalysis = false; // Whether to use all analysis possibilities 
   private int minWordSize;
   private int minSubwordSize;
@@ -46,12 +45,11 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
     minSubwordSize = getInt(args, "minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
     maxSubwordSize = getInt(args, "maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
     expandCompounds = getBoolean(args, "expandCompounds", false);
-    separateTokens = getBoolean(args, "separateTokens", true);
     allAnalysis = getBoolean(args, "allAnalysis", false);
   }
 
   public TokenStream create(TokenStream input) {
-    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, separateTokens, allAnalysis);
+    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, allAnalysis);
   }
   
   @Override

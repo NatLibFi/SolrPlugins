@@ -17,45 +17,24 @@
  *********************************************************************************/
 
 
-package fi.nationallibrary.ndl.solrvoikko;
+package fi.nationallibrary.ndl.solrvoikko2;
 
-import java.io.IOException;
-import java.util.Collection;
+import java.io.Reader;
 
-import org.apache.lucene.analysis.Token;
-import org.apache.lucene.index.IndexReader;
-import org.apache.solr.core.SolrCore;
-import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.spelling.SolrSpellChecker;
-import org.apache.solr.spelling.SpellingOptions;
-import org.apache.solr.spelling.SpellingResult;
+import org.apache.lucene.analysis.Analyzer;
 
 /**
  * 
  * @author ere.maijala@helsinki.fi
  *
  */
-public class VoikkoSpellChecker extends SolrSpellChecker {
-
-	@Override
-	public void build(SolrCore arg0, SolrIndexSearcher arg1) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void reload(SolrCore arg0, SolrIndexSearcher arg1)
-			throws IOException {
-		// TODO Auto-generated method stub
-
-	}
+public class VoikkoAnalyzer extends Analyzer {
 
   @Override
-  public SpellingResult getSuggestions(SpellingOptions options)
-      throws IOException {
-    SpellingResult result = new SpellingResult();
-    // TODO
-    return result;
+  protected TokenStreamComponents createComponents(String fieldName,
+      Reader reader) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

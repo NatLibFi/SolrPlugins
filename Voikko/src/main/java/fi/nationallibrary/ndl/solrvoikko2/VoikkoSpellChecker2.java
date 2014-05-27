@@ -1,5 +1,5 @@
 /* 
- * Copyright 2012 Ere Maijala, The National Library of Finland
+ * Copyright 2012 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,44 +17,42 @@
  *********************************************************************************/
 
 
-package fi.nationallibrary.ndl.solrvoikko;
+package fi.nationallibrary.ndl.solrvoikko2;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import java.io.IOException;
+
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.spelling.SolrSpellChecker;
+import org.apache.solr.spelling.SpellingOptions;
+import org.apache.solr.spelling.SpellingResult;
 
 /**
- * Unit test for simple App.
  * 
  * @author ere.maijala@helsinki.fi
  *
  */
- public class AppTest
-    extends TestCase
-{
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public AppTest( String testName )
-    {
-        super( testName );
-    }
+public class VoikkoSpellChecker2 extends SolrSpellChecker {
 
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite()
-    {
-        return new TestSuite( AppTest.class );
-    }
+	@Override
+	public void build(SolrCore arg0, SolrIndexSearcher arg1) {
+		// TODO Auto-generated method stub
 
-    /**
-     * Rigourous Test :-)
-     */
-    public void testApp()
-    {
-        assertTrue( true );
-    }
+	}
+
+	@Override
+	public void reload(SolrCore arg0, SolrIndexSearcher arg1)
+			throws IOException {
+		// TODO Auto-generated method stub
+
+	}
+
+  @Override
+  public SpellingResult getSuggestions(SpellingOptions options)
+      throws IOException {
+    SpellingResult result = new SpellingResult();
+    // TODO
+    return result;
+  }
+
 }
