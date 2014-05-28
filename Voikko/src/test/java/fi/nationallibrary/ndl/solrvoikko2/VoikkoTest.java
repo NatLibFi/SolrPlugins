@@ -23,13 +23,18 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.util.Version;
 import org.puimula.libvoikko.Voikko;
 
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+
+import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -122,6 +127,10 @@ import junit.framework.TestSuite;
      */
     final protected String getVoikkoWords(String term) throws IOException
     {
+      ConcurrentMap<String, List<CompoundToken>> cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
+          .maximumWeightedCapacity(100)
+          .build();
+
       Reader reader = new StringReader(term);
       Tokenizer tokenizer = new StandardTokenizer(Version.LUCENE_48, reader);
       tokenizer.reset();
@@ -129,7 +138,7 @@ import junit.framework.TestSuite;
       Voikko voikko = new Voikko("fi-x-morphoid");
       VoikkoFilter voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
           VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
-          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true);
+          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache);
 
       String results = "";
       

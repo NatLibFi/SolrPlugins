@@ -24,12 +24,17 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.util.Version;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
+
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+
+import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
 
 
 /**
@@ -54,6 +59,10 @@ public class TestApp {
     BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
     Voikko voikko = null;
     try {
+      ConcurrentMap<String, List<CompoundToken>> cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
+          .maximumWeightedCapacity(100)
+          .build();
+      
       voikko = new Voikko("fi-x-morphoid");
 
       Reader reader = new StringReader("");
@@ -63,7 +72,8 @@ public class TestApp {
       voikko = new Voikko("fi-x-morphoid");
       VoikkoFilter voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
           VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
-          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true);
+          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true,
+          cache);
       
       String text;
       System.out.println();

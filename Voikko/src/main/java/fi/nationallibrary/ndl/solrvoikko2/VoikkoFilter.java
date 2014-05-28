@@ -22,7 +22,6 @@ package fi.nationallibrary.ndl.solrvoikko2;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class VoikkoFilter extends TokenFilter {
    * The default for maximal length of subwords that get propagated to the output of this filter
    */
   public static final int DEFAULT_MAX_SUBWORD_SIZE = 25;
-
+  
   private static final String BASEFORM_ATTR = "BASEFORM";
   private static final String WORDBASES_ATTR = "WORDBASES";
 
@@ -70,23 +69,12 @@ public class VoikkoFilter extends TokenFilter {
   private final int minSubwordSize;
   private final int maxSubwordSize;
   private final boolean allAnalysis;
-
+  
   private final LinkedHashSet<CompoundToken> tokens;
 
-  // Cache for most recent analysis  
-  final int MAX_CACHED_ENTRIES = 1024;
-  private Map<String, List<CompoundToken>> cache = new LinkedHashMap<String, List<CompoundToken>>(MAX_CACHED_ENTRIES+1, .75F, true) {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 8246858049722712002L;
-
-    public boolean removeEldestEntry(Map.Entry<String, List<CompoundToken>> eldest) {
-        return size() > MAX_CACHED_ENTRIES;
-    }
-  };
+  private Map<String, List<CompoundToken>> cache;
   
-  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis) {
+  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis, Map<String, List<CompoundToken>> cache) {
     super(input);
     this.tokens = new LinkedHashSet<CompoundToken>();
     this.voikko = voikko;
@@ -95,6 +83,7 @@ public class VoikkoFilter extends TokenFilter {
     this.minSubwordSize = minSubwordSize;
     this.maxSubwordSize = maxSubwordSize;
     this.allAnalysis = allAnalysis;
+    this.cache = cache;
   }
 
   @Override
@@ -149,7 +138,9 @@ public class VoikkoFilter extends TokenFilter {
       if (termLen < minWordSize || !term.matches("[a-zA-ZåäöÅÄÖ]+")) {
         return true;
       }
-      List<CompoundToken> cachedTokens = cache.get(term.toLowerCase());
+      List<CompoundToken> cachedTokens = cache != null 
+          ? cache.get(term.toLowerCase())
+          : null;
       if (cachedTokens != null) {
         tokens.addAll(cachedTokens);
       } else {
@@ -157,7 +148,9 @@ public class VoikkoFilter extends TokenFilter {
 
         if (analysisList.isEmpty()) {
           ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>();
-          cache.put(term.toLowerCase(), tokenList);
+          if (cache != null) {
+            cache.put(term.toLowerCase(), tokenList);
+          }
           return true;
         }
         
@@ -268,7 +261,9 @@ public class VoikkoFilter extends TokenFilter {
           }
         }
         ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>(tokens);
-        cache.put(term.toLowerCase(), tokenList);
+        if (cache != null) {
+          cache.put(term.toLowerCase(), tokenList);
+        }
       }
       
       currentPosition = 1;
