@@ -138,7 +138,7 @@ import junit.framework.TestSuite;
       Voikko voikko = new Voikko("fi-x-morphoid");
       VoikkoFilter voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
           VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
-          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache);
+          VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache, 0);
 
       String results = "";
       

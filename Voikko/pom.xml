@@ -4,7 +4,7 @@
 
   <groupId>fi.nationallibrary.ndl</groupId>
   <artifactId>solrvoikko2</artifactId>
-  <version>2.1.0-SOLR-4.8.1-SNAPSHOT</version>
+  <version>2.2.0-SOLR-4.8.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>solrvoikko</name>

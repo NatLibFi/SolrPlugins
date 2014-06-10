@@ -43,13 +43,14 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
    */
   private static final int DEFAULT_CACHE_SIZE = 1024;
   
-  private boolean expandCompounds = false;
-  private boolean allAnalysis = false; // Whether to use all analysis possibilities 
-  private int minWordSize;
-  private int minSubwordSize;
-  private int maxSubwordSize;
-  private int cacheSize;
-  private Voikko voikko;
+  private final boolean expandCompounds;
+  private final boolean allAnalysis; // Whether to use all analysis possibilities 
+  private final int minWordSize;
+  private final int minSubwordSize;
+  private final int maxSubwordSize;
+  private final int cacheSize;
+  private final int statsInterval;
+  private final Voikko voikko;
 
   private ConcurrentMap<String, List<CompoundToken>> cache;
   
@@ -65,10 +66,11 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
     cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
         .maximumWeightedCapacity(cacheSize)
         .build();
+    statsInterval = getInt(args, "statsInterval", VoikkoFilter.DEFAULT_STATS_INTERVAL);
   }
 
   public TokenStream create(TokenStream input) {
-    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, allAnalysis, cache);
+    return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, allAnalysis, cache, statsInterval);
   }
   
   @Override

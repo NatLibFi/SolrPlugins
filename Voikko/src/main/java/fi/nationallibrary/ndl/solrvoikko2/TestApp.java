@@ -73,7 +73,7 @@ public class TestApp {
       VoikkoFilter voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
           VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
           VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true,
-          cache);
+          cache, 0);
       
       String text;
       System.out.println();
