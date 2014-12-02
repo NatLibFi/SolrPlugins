@@ -213,10 +213,8 @@ public class VoikkoFilter extends TokenFilter {
             // Split by plus sign (unless right after an open parenthesis)
             String matches[] = wordbases.split("(?<!\\()\\+");
   
-            int currentPos = 0;
-            String lastWordBody = "";
-            int lastPos = 0;
-            int wordPos = 0;
+            int wordPos = 1;
+            String composedWord = "";
             // The string starts with a plus sign, so skip the first (empty) entry
             for (int i = 1; i <= matches.length - 1; i++) {
               String wordAnalysis = matches[i];
@@ -225,59 +223,39 @@ public class VoikkoFilter extends TokenFilter {
               wordAnalysis = wordAnalysis.replaceAll("=", "");
               
               String wordBody;
-              String baseForm;
+              String wordPart;
               int parenPos = wordAnalysis.indexOf('(');
               if (parenPos == -1) {
-                wordBody = baseForm = wordAnalysis;
+                wordBody = wordPart = wordAnalysis;
               } else {
                 // Word body is before the parenthesis
                 wordBody = wordAnalysis.substring(0, parenPos);
                 
                 // Base form or derivative is in parenthesis
-                baseForm = wordAnalysis.substring(parenPos + 1, wordAnalysis.length() - 1);
+                wordPart = wordAnalysis.substring(parenPos + 1, wordAnalysis.length() - 1);
               }
               
-              boolean isDerivative = baseForm.startsWith("+");
+              boolean isDerivative = wordPart.startsWith("+");
   
-              String word;
-              int wordOffset, wordLen;
-              if (isDerivative) {
-                // Derivative suffix, merge with word body
-                word = lastWordBody + wordBody;
-                wordOffset = lastPos;
-                wordLen = word.length();
-              } else {
-                word = baseForm;
-                wordOffset = currentPos;
-                wordLen = word.length();
-                lastWordBody = wordBody;
-                lastPos = currentPos;
-                currentPos += baseForm.length();
-              }
-              
-              // Make sure we don't exceed the length of the original term
-              if (wordOffset + wordLen > termLen) {
-                if (wordOffset >= termLen) {
-                  wordOffset = wordLen - termLen;
-                  if (wordOffset < 0) {
-                    wordOffset = 0;
+              if (!isDerivative) {
+                if (!composedWord.isEmpty() && composedWord.length() >= minSubwordSize) {
+                  if (composedWord.length() > maxSubwordSize) {
+                    tokens.add(new CompoundToken(composedWord.substring(0, maxSubwordSize), wordPos));
+                  } else {
+                    tokens.add(new CompoundToken(composedWord, wordPos));
                   }
-                } else {
-                  wordLen = termLen - wordOffset;
-                }
-              }
-              
-              if (wordLen > minSubwordSize) {
-                if (wordLen > maxSubwordSize) {
-                  word = word.substring(0, maxSubwordSize);
-                  wordLen = maxSubwordSize;
-                }
-                
-                if (!isDerivative) {
                   ++wordPos;
                 }
-                
-                tokens.add(new CompoundToken(word, wordPos));
+                composedWord = wordBody;
+              } else {
+                composedWord += wordBody;
+              }
+            }
+            if (!composedWord.isEmpty() && composedWord.length() >= minSubwordSize) {
+              if (composedWord.length() > maxSubwordSize) {
+                tokens.add(new CompoundToken(composedWord.substring(0, maxSubwordSize), wordPos));
+              } else {
+                tokens.add(new CompoundToken(composedWord, wordPos));
               }
             }
           }

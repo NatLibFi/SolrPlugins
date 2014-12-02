@@ -75,16 +75,16 @@ import junit.framework.TestSuite;
       
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "kyminsanomat",
-          "kyminsanoma [1:0:12],kymi [0:0:12],sanoma [1:0:12],sanoa [0:0:12]"
+          "kyminsanoma [1:0:12],kymi [0:0:12],sanoma [1:0:12]"
       ));
       
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "taidemaalaus",
-          "taidemaalaus [1:0:12],taide [0:0:12],maalata [1:0:12],maalaus [0:0:12]"
+          "taidemaalaus [1:0:12],taide [0:0:12],maalaus [1:0:12]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "lopputarkastuspöytäkirja", 
-          "lopputarkastuspöytäkirja [1:0:24],loppu [0:0:24],tarkastaa [1:0:24],pöytä [1:0:24],kirja [1:0:24]"
+          "lopputarkastuspöytäkirja [1:0:24],loppu [0:0:24],tarkastus [1:0:24],pöytä [1:0:24],kirja [1:0:24]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "totalgibberish",
@@ -96,15 +96,23 @@ import junit.framework.TestSuite;
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "hyvinvointiasiantuntijajärjestelmässä",
-          "hyvinvointiasiantuntijajärjestelmä [1:0:37],hyvinvointi [0:0:37],asia [1:0:37],tuntea [1:0:37],tuntija [0:0:37],järjestelmä [1:0:37]"
+          "hyvinvointiasiantuntijajärjestelmä [1:0:37],hyvinvointi [0:0:37],asia [1:0:37],tuntija [1:0:37],järjestelmä [1:0:37]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "kahdeksankulmainen",
-          "kahdeksankulmainen [1:0:18],kahdeksan [0:0:18],kahdeksa [0:0:18],kulma [1:0:18],kulmainen [0:0:18]"
+          "kahdeksankulmainen [1:0:18],kahdeksan [0:0:18],kahdeksa [0:0:18],kulmainen [1:0:18]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "perinteinen puutarhakaluste",
-          "perinteinen [1:0:11],perinne [0:0:11],puutarhakaluste [1:12:27],puu [0:12:27],tarha [1:12:27],kaluste [1:12:27]"
+          "perinteinen [1:0:11],puutarhakaluste [1:12:27],puu [0:12:27],tarha [1:12:27],kaluste [1:12:27]"
+      ));
+      tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
+          "nuorisotyö",
+          "nuorisotyö [1:0:10],nuoriso [0:0:10],työ [1:0:10]"
+      ));
+      tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
+          "nuorisotyöttömyys",
+          "nuorisotyöttömyys [1:0:17],nuoriso [0:0:17],työttömyys [1:0:17]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "",
@@ -132,7 +140,7 @@ import junit.framework.TestSuite;
           .build();
 
       Reader reader = new StringReader(term);
-      Tokenizer tokenizer = new StandardTokenizer(Version.LUCENE_48, reader);
+      Tokenizer tokenizer = new StandardTokenizer(reader);
       tokenizer.reset();
 
       Voikko voikko = new Voikko("fi-x-morphoid");
