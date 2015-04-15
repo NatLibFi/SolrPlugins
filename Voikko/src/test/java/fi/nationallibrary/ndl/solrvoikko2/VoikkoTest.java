@@ -1,5 +1,5 @@
 /* 
- * Copyright 2014 Ere Maijala, The National Library of Finland
+ * Copyright (C) 2014-2015 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,7 +20,6 @@
 package fi.nationallibrary.ndl.solrvoikko2;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,7 +28,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.util.AttributeFactory;
+import org.apache.lucene.analysis.core.StopFilterFactory;
 import org.puimula.libvoikko.Voikko;
 
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
@@ -139,8 +139,8 @@ import junit.framework.TestSuite;
           .maximumWeightedCapacity(100)
           .build();
 
-      Reader reader = new StringReader(term);
-      Tokenizer tokenizer = new StandardTokenizer(reader);
+      Tokenizer tokenizer = new StandardTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY);
+      tokenizer.setReader(new StringReader(term));
       tokenizer.reset();
 
       Voikko voikko = new Voikko("fi-x-morphoid");
@@ -149,7 +149,8 @@ import junit.framework.TestSuite;
           VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache, 0);
 
       String results = "";
-      
+
+      //voikkoFilter.reset();
       while (voikkoFilter.incrementToken()) {
         if (!results.isEmpty()) {
           results += ",";

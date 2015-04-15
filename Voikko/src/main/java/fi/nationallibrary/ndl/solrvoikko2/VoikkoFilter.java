@@ -1,5 +1,5 @@
 /* 
- * Copyright 2012-2014 The National Library of Finland
+ * Copyright (C) 2012-2015 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,7 +38,8 @@ import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
 
 /**
- * 
+ * Voikko Filter
+ *  
  * @author ere.maijala@helsinki.fi
  *
  */
@@ -303,7 +304,7 @@ public class VoikkoFilter extends TokenFilter {
     final Logger logger = LoggerFactory.getLogger(VoikkoFilter.class.getName());
     logger.info(msg);
   }
-
+  
     
   /**
    * Helper class to hold decompounded token information

@@ -1,5 +1,5 @@
 /* 
- * Copyright 2012 The National Library of Finland
+ * Copyright (C) 2012-2015 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.util.AttributeFactory;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
 
@@ -65,8 +65,9 @@ public class TestApp {
       
       voikko = new Voikko("fi-x-morphoid");
 
-      Reader reader = new StringReader("");
-      Tokenizer tokenizer = new StandardTokenizer(Version.LUCENE_48, reader);
+      StringReader reader = new StringReader("");
+      Tokenizer tokenizer = new StandardTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY);
+      tokenizer.setReader(reader);
       tokenizer.reset();
 
       voikko = new Voikko("fi-x-morphoid");
