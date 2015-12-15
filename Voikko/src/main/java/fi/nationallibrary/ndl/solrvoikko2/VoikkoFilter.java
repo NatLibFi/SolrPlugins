@@ -201,6 +201,7 @@ public class VoikkoFilter extends TokenFilter {
         // Expand compound words
         if (expandCompounds) {
           first = true;
+          StringBuilder composedWord = new StringBuilder();
           for (Analysis analysis: analysisList) {
             if (!this.allAnalysis && !first) {
               break;
@@ -215,7 +216,7 @@ public class VoikkoFilter extends TokenFilter {
             String matches[] = wordbases.split("(?<!\\()\\+");
   
             int wordPos = 1;
-            String composedWord = "";
+            composedWord.setLength(0);
             // The string starts with a plus sign, so skip the first (empty) entry
             for (int i = 1; i <= matches.length - 1; i++) {
               String wordAnalysis = matches[i];
@@ -235,29 +236,24 @@ public class VoikkoFilter extends TokenFilter {
                 // Base form or derivative is in parenthesis
                 wordPart = wordAnalysis.substring(parenPos + 1, wordAnalysis.length() - 1);
               }
-              
               boolean isDerivative = wordPart.startsWith("+");
-  
               if (!isDerivative) {
-                if (!composedWord.isEmpty() && composedWord.length() >= minSubwordSize) {
+                if (composedWord.length() >= minSubwordSize) {
                   if (composedWord.length() > maxSubwordSize) {
-                    tokens.add(new CompoundToken(composedWord.substring(0, maxSubwordSize), wordPos));
-                  } else {
-                    tokens.add(new CompoundToken(composedWord, wordPos));
+                    composedWord.setLength(maxSubwordSize);
                   }
+                  tokens.add(new CompoundToken(composedWord.toString(), wordPos));
                   ++wordPos;
                 }
-                composedWord = wordBody;
-              } else {
-                composedWord += wordBody;
+                composedWord.setLength(0);
               }
+              composedWord.append(wordBody);
             }
-            if (!composedWord.isEmpty() && composedWord.length() >= minSubwordSize) {
+            if (composedWord.length() >= minSubwordSize) {
               if (composedWord.length() > maxSubwordSize) {
-                tokens.add(new CompoundToken(composedWord.substring(0, maxSubwordSize), wordPos));
-              } else {
-                tokens.add(new CompoundToken(composedWord, wordPos));
+                composedWord.setLength(maxSubwordSize);
               }
+              tokens.add(new CompoundToken(composedWord.toString(), wordPos));
             }
           }
         }
