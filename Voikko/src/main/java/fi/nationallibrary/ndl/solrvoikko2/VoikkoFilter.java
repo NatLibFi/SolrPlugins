@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2012-2015 The National Library of Finland
+ * Copyright (C) 2012-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -36,6 +35,7 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
+import com.github.benmanes.caffeine.cache.Cache;
 
 /**
  * Voikko Filter
@@ -62,7 +62,7 @@ public class VoikkoFilter extends TokenFilter {
   /**
    * Default token count interval for displaying a statistics message
    */
-  public static final int DEFAULT_STATS_INTERVAL = 100000;
+  public static final int DEFAULT_STATS_INTERVAL = 0;
   
   private static final String BASEFORM_ATTR = "BASEFORM";
   private static final String WORDBASES_ATTR = "WORDBASES";
@@ -82,16 +82,14 @@ public class VoikkoFilter extends TokenFilter {
   
   private final LinkedHashSet<CompoundToken> tokens;
 
-  private Map<String, List<CompoundToken>> cache;
+  private Cache<String, List<CompoundToken>> cache;
   
   // Statistics
   private final static AtomicLong tokenCount = new AtomicLong();
   private final static AtomicLong analysisCount = new AtomicLong();
   private final static AtomicLong analysisTime = new AtomicLong();
-  private final static AtomicLong cacheLookups = new AtomicLong();
-  private final static AtomicLong cacheHits = new AtomicLong();
   
-  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis, Map<String, List<CompoundToken>> cache, int statsInterval) {
+  protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis, Cache<String, List<CompoundToken>> cache, int statsInterval) {
     super(input);
     this.tokens = new LinkedHashSet<CompoundToken>();
     this.voikko = voikko;
@@ -156,22 +154,25 @@ public class VoikkoFilter extends TokenFilter {
       if (termLen < minWordSize || !term.matches("[a-zA-ZåäöÅÄÖ]+")) {
         return true;
       }
-      cacheLookups.incrementAndGet();
       List<CompoundToken> cachedTokens = cache != null 
-          ? cache.get(term.toLowerCase())
-          : null;
+        ? cache.getIfPresent(term.toLowerCase())
+        : null;
       if (cachedTokens != null) {
-        cacheHits.incrementAndGet();
         tokens.addAll(cachedTokens);
       } else {
-        analysisCount.incrementAndGet();
-        long startTime = System.nanoTime();
+        long startTime = 0;
+        if (statsInterval > 0) {
+          analysisCount.incrementAndGet();
+          startTime = System.nanoTime();
+        }
         List<Analysis> analysisList = voikko.analyze(term);
-        analysisTime.addAndGet((System.nanoTime() - startTime) / 1000000);
+        if (statsInterval > 0) {
+          analysisTime.addAndGet((System.nanoTime() - startTime) / 1000000);
+        }
         
         if (analysisList.isEmpty()) {
-          ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>();
           if (cache != null) {
+            ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>();
             cache.put(term.toLowerCase(), tokenList);
           }
           return true;
@@ -292,11 +293,11 @@ public class VoikkoFilter extends TokenFilter {
       + ", analysisTime=" + analysisTime.get()
       + ", avgTime=" + (analysisCount.get() > 0
         ? (float)analysisTime.get() / analysisCount.get() : 0) + "ms"
-      + ", cacheSize=" + cache.size()
-      + ", cacheHits=" + cacheHits.get()
-      + ", hitRatio=" + (cacheLookups.get() > 0
-        ? (float)cacheHits.get() / cacheLookups.get() : 0);
-    
+      + ", cacheSize=" + cache.estimatedSize()
+      + ", cacheHits=" + cache.stats().hitCount()
+      + ", hitRatio=" + cache.stats().hitRate()
+      + ", evictionCount=" + cache.stats().evictionCount();
+
     final Logger logger = LoggerFactory.getLogger(VoikkoFilter.class.getName());
     logger.info(msg);
   }
@@ -334,7 +335,5 @@ public class VoikkoFilter extends TokenFilter {
       return t2.txt.equals(txt) 
           && t2.position == position;
     }
-
   }
-
 }

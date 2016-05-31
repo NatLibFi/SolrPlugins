@@ -4,7 +4,7 @@
 
   <groupId>fi.nationallibrary.ndl</groupId>
   <artifactId>solrvoikko2</artifactId>
-  <version>2.2.0-SOLR-5.4.0-SNAPSHOT</version>
+  <version>2.3.0-SOLR-6.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>solrvoikko</name>
@@ -28,13 +28,8 @@
     </dependency>
     <dependency>
     	<groupId>org.apache.solr</groupId>
-    	<artifactId>solr-solrj</artifactId>
-    	<version>5.4.0</version>
-    </dependency>
-    <dependency>
-    	<groupId>org.apache.solr</groupId>
     	<artifactId>solr-core</artifactId>
-    	<version>5.4.0</version>
+    	<version>6.0.1</version>
     </dependency>
     <dependency>
     	<groupId>javax.servlet</groupId>
@@ -49,9 +44,9 @@
       <version>3.6.1</version>
     </dependency>
     <dependency>
-      <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-      <artifactId>concurrentlinkedhashmap-lru</artifactId>
-      <version>1.2</version>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>2.3.0</version>
     </dependency>
   </dependencies>
 </project>

@@ -1,5 +1,5 @@
 /* 
- * Copyright 2012 The National Library of Finland
+ * Copyright 2012-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

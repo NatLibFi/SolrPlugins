@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2012-2015 The National Library of Finland
+ * Copyright (C) 2012-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,18 +21,16 @@ package fi.nationallibrary.ndl.solrvoikko2;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.StringReader;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.util.AttributeFactory;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
-
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
 
@@ -59,8 +57,8 @@ public class TestApp {
     BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
     Voikko voikko = null;
     try {
-      ConcurrentMap<String, List<CompoundToken>> cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
-          .maximumWeightedCapacity(100)
+      Cache<String, List<CompoundToken>> cache = Caffeine.newBuilder()
+          .maximumSize(100)
           .build();
       
       voikko = new Voikko("fi-x-morphoid");

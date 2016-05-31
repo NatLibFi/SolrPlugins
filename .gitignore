@@ -1,0 +1,19 @@
+# OS Created Files
+
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# IDE Files
+.metadata/*
+.settings/*
+.project
+.buildpath
+.ExternalToolBuilders
+.idea
+.classpath
+
+# Local files
+target
+*.diff

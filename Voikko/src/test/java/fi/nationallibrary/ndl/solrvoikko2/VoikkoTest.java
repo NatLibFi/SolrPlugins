@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2014-2015 The National Library of Finland
+ * Copyright (C) 2014-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,20 +24,18 @@ import java.io.StringReader;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.util.AttributeFactory;
-import org.apache.lucene.analysis.core.StopFilterFactory;
 import org.puimula.libvoikko.Voikko;
-
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
-
-import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+
+import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
 
 /**
  * Unit tests for Voikko
@@ -135,8 +133,8 @@ import junit.framework.TestSuite;
      */
     final protected String getVoikkoWords(String term) throws IOException
     {
-      ConcurrentMap<String, List<CompoundToken>> cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
-          .maximumWeightedCapacity(100)
+      Cache<String, List<CompoundToken>> cache = Caffeine.newBuilder()
+          .maximumSize(100)
           .build();
 
       Tokenizer tokenizer = new StandardTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY);
@@ -150,7 +148,6 @@ import junit.framework.TestSuite;
 
       String results = "";
 
-      //voikkoFilter.reset();
       while (voikkoFilter.incrementToken()) {
         if (!results.isEmpty()) {
           results += ",";

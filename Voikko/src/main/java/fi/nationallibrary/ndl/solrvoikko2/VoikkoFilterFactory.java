@@ -1,5 +1,5 @@
 /* 
- * Copyright 2012 The National Library of Finland
+ * Copyright 2012-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,13 +21,12 @@ package fi.nationallibrary.ndl.solrvoikko2;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.util.TokenFilterFactory;
 import org.puimula.libvoikko.Voikko;
-
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
 
@@ -51,8 +50,7 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
   private final int cacheSize;
   private final int statsInterval;
   private final Voikko voikko;
-
-  private ConcurrentMap<String, List<CompoundToken>> cache;
+  private Cache<String, List<CompoundToken>> cache;
   
   public VoikkoFilterFactory(Map<String, String> args) {
     super(args);
@@ -63,10 +61,13 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
     expandCompounds = getBoolean(args, "expandCompounds", false);
     allAnalysis = getBoolean(args, "allAnalysis", false);
     cacheSize = getInt(args, "cacheSize", DEFAULT_CACHE_SIZE);
-    cache = new ConcurrentLinkedHashMap.Builder<String, List<CompoundToken>>()
-        .maximumWeightedCapacity(cacheSize)
-        .build();
     statsInterval = getInt(args, "statsInterval", VoikkoFilter.DEFAULT_STATS_INTERVAL);
+    Caffeine caffeine = Caffeine.newBuilder() 
+      .maximumSize(cacheSize);
+    if (statsInterval > 0) {
+      caffeine.recordStats();  
+    }
+    cache = caffeine.build();
   }
 
   public TokenStream create(TokenStream input) {
