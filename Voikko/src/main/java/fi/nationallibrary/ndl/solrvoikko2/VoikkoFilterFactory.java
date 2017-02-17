@@ -1,5 +1,5 @@
-/* 
- * Copyright 2012-2016 The National Library of Finland
+/*
+ * Copyright 2012-2017 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,10 +28,11 @@ import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
+import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
 /**
- * 
+ * Voikko Filter Factory
+ *
  * @author ere.maijala@helsinki.fi
  *
  */
@@ -41,9 +42,9 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
    * Default cache size
    */
   private static final int DEFAULT_CACHE_SIZE = 1024;
-  
+
   private final boolean expandCompounds;
-  private final boolean allAnalysis; // Whether to use all analysis possibilities 
+  private final boolean allAnalysis; // Whether to use all analysis possibilities
   private final int minWordSize;
   private final int minSubwordSize;
   private final int maxSubwordSize;
@@ -51,10 +52,11 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
   private final int statsInterval;
   private final Voikko voikko;
   private Cache<String, List<CompoundToken>> cache;
-  
+
   public VoikkoFilterFactory(Map<String, String> args) {
     super(args);
-    voikko = new Voikko("fi-x-morphoid");
+    String dictionaryPath = get(args, "dictionaryPath", "");
+    voikko = new Voikko("fi-x-morphoid", dictionaryPath.isEmpty() ? null : dictionaryPath);
     minWordSize = getInt(args, "minWordSize", VoikkoFilter.DEFAULT_MIN_WORD_SIZE);
     minSubwordSize = getInt(args, "minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
     maxSubwordSize = getInt(args, "maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
@@ -62,21 +64,25 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
     allAnalysis = getBoolean(args, "allAnalysis", false);
     cacheSize = getInt(args, "cacheSize", DEFAULT_CACHE_SIZE);
     statsInterval = getInt(args, "statsInterval", VoikkoFilter.DEFAULT_STATS_INTERVAL);
-    Caffeine caffeine = Caffeine.newBuilder() 
-      .maximumSize(cacheSize);
     if (statsInterval > 0) {
-      caffeine.recordStats();  
+      cache = Caffeine.newBuilder()
+      .maximumSize(cacheSize)
+      .recordStats()
+      .build();
+    } else {
+      cache = Caffeine.newBuilder()
+      .maximumSize(cacheSize)
+      .build();
     }
-    cache = caffeine.build();
   }
 
   public TokenStream create(TokenStream input) {
     return new VoikkoFilter(input, voikko, expandCompounds, minWordSize, minSubwordSize, maxSubwordSize, allAnalysis, cache, statsInterval);
   }
-  
+
   @Override
   protected void finalize() throws Throwable {
 	  voikko.terminate();
   }
-  
+
 }

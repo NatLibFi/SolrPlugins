@@ -1,5 +1,5 @@
-/* 
- * Copyright 2012-2016 The National Library of Finland
+/*
+ * Copyright 2012-2017 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,7 +28,7 @@ import org.apache.solr.spelling.SpellingOptions;
 import org.apache.solr.spelling.SpellingResult;
 
 /**
- * 
+ *
  * @author ere.maijala@helsinki.fi
  *
  */

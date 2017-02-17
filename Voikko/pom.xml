@@ -4,7 +4,7 @@
 
   <groupId>fi.nationallibrary.ndl</groupId>
   <artifactId>solrvoikko2</artifactId>
-  <version>2.3.0-SOLR-6.0.1-SNAPSHOT</version>
+  <version>2.4.0-SOLR-6.4.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>solrvoikko</name>
@@ -23,30 +23,30 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>3.8.1</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
     	<groupId>org.apache.solr</groupId>
     	<artifactId>solr-core</artifactId>
-    	<version>6.0.1</version>
+    	<version>6.4.1</version>
     </dependency>
     <dependency>
     	<groupId>javax.servlet</groupId>
-    	<artifactId>servlet-api</artifactId>
-    	<version>3.0-alpha-1</version>
+    	<artifactId>javax.servlet-api</artifactId>
+    	<version>3.1.0</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.puimula.voikko</groupId>
       <artifactId>libvoikko</artifactId>
-      <version>3.6.1</version>
+      <version>4.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
-      <version>2.3.0</version>
+      <version>2.3.5</version>
     </dependency>
   </dependencies>
 </project>

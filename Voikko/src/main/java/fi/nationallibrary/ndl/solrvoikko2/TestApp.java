@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
@@ -32,18 +32,17 @@ import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
-
+import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
 /**
- * 
- * @author hatapitk@iki.fi 
+ *
+ * @author hatapitk@iki.fi
  * @author ere.maijala@helsinki.fi
  *
  */
 public class TestApp {
 
-  
+
   private static final String BASEFORM = "BASEFORM";
   private static final String WORDBASES = "WORDBASES";
 
@@ -52,7 +51,7 @@ public class TestApp {
     public int startInOriginal;
     public int lengthInOriginal;
   }
-  
+
   public static void main(String[] args) throws IOException {
     BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
     Voikko voikko = null;
@@ -60,7 +59,7 @@ public class TestApp {
       Cache<String, List<CompoundToken>> cache = Caffeine.newBuilder()
           .maximumSize(100)
           .build();
-      
+
       voikko = new Voikko("fi-x-morphoid");
 
       StringReader reader = new StringReader("");
@@ -73,7 +72,7 @@ public class TestApp {
           VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
           VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true,
           cache, 0);
-      
+
       String text;
       System.out.println();
       System.out.println("Enter word or phrase");
@@ -95,17 +94,17 @@ public class TestApp {
             System.out.println(analysis.get(WORDBASES));
           }
         }
-        
+
         tokenizer.close();
         reader = new StringReader(text);
         tokenizer.setReader(reader);
         tokenizer.reset();
-        
+
         System.out.println("\nVoikkoFilter results:");
         while (voikkoFilter.incrementToken()) {
           System.out.println(voikkoFilter.termAtt.toString() + " [" + voikkoFilter.posIncAtt.getPositionIncrement() + ":" + voikkoFilter.offsetAtt.startOffset() + ":" + voikkoFilter.offsetAtt.endOffset() + "]");
         }
-        
+
         System.out.println();
         System.out.println("Enter word or phrase");
       }
@@ -115,7 +114,7 @@ public class TestApp {
       voikko.terminate();
     }
   }
-  
+
   private static void print(WordComponent component) {
     System.out.println(component.component + " [" + component.startInOriginal + ":" + component.lengthInOriginal + "]");
   }

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2014-2016 The National Library of Finland
  *
  * This program is free software; you can redistribute it and/or
@@ -35,11 +35,11 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
-import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
+import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
 /**
  * Unit tests for Voikko
- * 
+ *
  * @author ere.maijala@helsinki.fi
  *
  */
@@ -70,18 +70,18 @@ import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
     public void testVoikko() throws IOException
     {
       LinkedList<Entry<String, String>> tests = new LinkedList<Entry<String, String>>();
-      
+
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "kyminsanomat",
           "kyminsanoma [1:0:12],kymi [0:0:12],sanoma [1:0:12]"
       ));
-      
+
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
           "taidemaalaus",
           "taidemaalaus [1:0:12],taide [0:0:12],maalaus [1:0:12]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
-          "lopputarkastuspöytäkirja", 
+          "lopputarkastuspöytäkirja",
           "lopputarkastuspöytäkirja [1:0:24],loppu [0:0:24],tarkastus [1:0:24],pöytä [1:0:24],kirja [1:0:24]"
       ));
       tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
@@ -116,19 +116,19 @@ import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
           "",
           ""
       ));
-      
+
       for (int i = 0; i < tests.size(); i++) {
         Entry<String, String> entry = tests.get(i);
         assertEquals("Testing '" + entry.getKey() + "'", entry.getValue(), getVoikkoWords(entry.getKey()));
       }
     }
-    
+
     /**
      * Execute Voikko analysis and return results in a string
-     * 
+     *
      * @param term           String to analyze
-     * 
-     * @return Comma-separated list of results 
+     *
+     * @return Comma-separated list of results
      * @throws IOException
      */
     final protected String getVoikkoWords(String term) throws IOException
@@ -155,7 +155,7 @@ import fi.nationallibrary.ndl.solrvoikko2.VoikkoFilter.CompoundToken;
         results += voikkoFilter.termAtt.toString() + " [" + voikkoFilter.posIncAtt.getPositionIncrement() + ":" + voikkoFilter.offsetAtt.startOffset() + ":" + voikkoFilter.offsetAtt.endOffset() + "]";
       }
       voikkoFilter.close();
-      
+
       return results;
     }
 }
