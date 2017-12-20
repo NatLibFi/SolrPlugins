@@ -90,6 +90,8 @@ public class VoikkoFilter extends TokenFilter {
   private final static AtomicLong analysisCount = new AtomicLong();
   private final static AtomicLong analysisTime = new AtomicLong();
 
+  private static final Logger log = LoggerFactory.getLogger(VoikkoFilter.class.getName());
+
   protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis, Cache<String, List<CompoundToken>> cache, int statsInterval) {
     super(input);
     this.tokens = new LinkedHashSet<CompoundToken>();
@@ -226,8 +228,8 @@ public class VoikkoFilter extends TokenFilter {
               // get rid of equals sign in e.g. di=oksidi
               wordAnalysis = wordAnalysis.replaceAll("=", "");
 
-              String wordBody;
-              String wordPart;
+              final String wordBody;
+              final String wordPart;
               int parenPos = wordAnalysis.indexOf('(');
               if (parenPos == -1) {
                 wordBody = wordPart = wordAnalysis;
@@ -238,7 +240,7 @@ public class VoikkoFilter extends TokenFilter {
                 // Base form or derivative is in parenthesis
                 wordPart = wordAnalysis.substring(parenPos + 1, wordAnalysis.length() - 1);
               }
-              boolean isDerivative = wordPart.startsWith("+");
+              final boolean isDerivative = wordPart.startsWith("+");
               if (!isDerivative) {
                 if (composedWord.length() >= minSubwordSize) {
                   if (composedWord.length() > maxSubwordSize) {
@@ -269,7 +271,7 @@ public class VoikkoFilter extends TokenFilter {
 
       Iterator<CompoundToken> it = tokens.iterator();
       if (it.hasNext()) {
-        CompoundToken t = it.next();
+        final CompoundToken t = it.next();
         it.remove();
         termAtt.setEmpty().append(t.txt);
       }
@@ -287,18 +289,17 @@ public class VoikkoFilter extends TokenFilter {
    * Helper function that writes periodic stats to Solr log
    */
   protected void logStatistics() {
-    String msg = "Stats"
+    final String msg = "Stats"
       + ": tokenCount=" + tokenCount.get()
       + ", analysisCount=" + analysisCount.get()
       + ", analysisTime=" + analysisTime.get()
       + ", avgTime=" + (analysisCount.get() > 0
         ? (float)analysisTime.get() / analysisCount.get() : 0) + "ms"
-      + ", cacheSize=" + cache.estimatedSize()
-      + ", cacheHits=" + cache.stats().hitCount()
-      + ", hitRatio=" + cache.stats().hitRate()
-      + ", evictionCount=" + cache.stats().evictionCount();
+      + ", cacheSize=" + (cache != null ? cache.estimatedSize() : '0')
+      + ", cacheHits=" + (cache != null ? cache.stats().hitCount() : '-')
+      + ", hitRatio=" + (cache != null ? cache.stats().hitRate() : '-')
+      + ", evictionCount=" + (cache != null ? cache.stats().evictionCount() : '-');
 
-    final Logger logger = LoggerFactory.getLogger(VoikkoFilter.class.getName());
-    logger.info(msg);
+    log.info(msg);
   }
 }

@@ -27,6 +27,8 @@ import org.apache.lucene.analysis.util.TokenFilterFactory;
 import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
@@ -51,7 +53,8 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
   private final int cacheSize;
   private final int statsInterval;
   private final Voikko voikko;
-  private Cache<String, List<CompoundToken>> cache;
+  private final Cache<String, List<CompoundToken>> cache;
+  private final Logger log = LoggerFactory.getLogger(VoikkoFilterFactory.class.getName());
 
   public VoikkoFilterFactory(Map<String, String> args) {
     super(args);
@@ -62,18 +65,23 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
     maxSubwordSize = getInt(args, "maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
     expandCompounds = getBoolean(args, "expandCompounds", false);
     allAnalysis = getBoolean(args, "allAnalysis", false);
-    cacheSize = getInt(args, "cacheSize", DEFAULT_CACHE_SIZE);
     statsInterval = getInt(args, "statsInterval", VoikkoFilter.DEFAULT_STATS_INTERVAL);
-    if (statsInterval > 0) {
-      cache = Caffeine.newBuilder()
-      .maximumSize(cacheSize)
-      .recordStats()
-      .build();
+    cacheSize = getInt(args, "cacheSize", DEFAULT_CACHE_SIZE);
+    if (cacheSize > 0) {
+      if (statsInterval > 0) {
+        cache = Caffeine.newBuilder()
+        .maximumSize(cacheSize)
+        .recordStats()
+        .build();
+      } else {
+        cache = Caffeine.newBuilder()
+        .maximumSize(cacheSize)
+        .build();
+      }
     } else {
-      cache = Caffeine.newBuilder()
-      .maximumSize(cacheSize)
-      .build();
+      cache = null;
     }
+    log.info("initialized with cache for " + cacheSize + " entries");
   }
 
   public TokenStream create(TokenStream input) {
