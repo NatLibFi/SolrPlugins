@@ -221,6 +221,7 @@ public class VoikkoFilter extends TokenFilter {
 
             int wordPos = 1;
             composedWord.setLength(0);
+            int wordPosBase = 1;
             // The string starts with a plus sign, so skip the first (empty) entry
             for (int i = 1; i <= matches.length - 1; i++) {
               String wordAnalysis = matches[i];
@@ -242,6 +243,16 @@ public class VoikkoFilter extends TokenFilter {
               }
               final boolean isDerivative = wordPart.startsWith("+");
               if (!isDerivative) {
+                // Add the non-derivative word separately
+                if (wordPart.length() >= minSubwordSize) {
+                  if (wordPart.length() > maxSubwordSize) {
+                    tokens.add(new CompoundToken(wordPart.substring(0, maxSubwordSize), wordPosBase));
+                  } else {
+                    tokens.add(new CompoundToken(wordPart, wordPosBase));
+                  }
+                  ++wordPosBase;
+                }
+                // Add previously composed word
                 if (composedWord.length() >= minSubwordSize) {
                   if (composedWord.length() > maxSubwordSize) {
                     composedWord.setLength(maxSubwordSize);
