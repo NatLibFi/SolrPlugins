@@ -13,6 +13,9 @@ Thumbs.db
 .ExternalToolBuilders
 .idea
 .classpath
+.settings
+.vscode
+.factorypath
 
 # Local files
 target
