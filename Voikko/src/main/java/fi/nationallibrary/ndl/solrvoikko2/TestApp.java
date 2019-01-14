@@ -88,9 +88,11 @@ public class TestApp {
             component.component = analysis.get(BASEFORM);
             component.startInOriginal = 0;
             component.lengthInOriginal = text.length();
+            System.out.print("base form: ");
             print(component);
           }
           if (analysis.containsKey(WORDBASES)) {
+            System.out.print("word bases: ");
             System.out.println(analysis.get(WORDBASES));
           }
         }
