@@ -26,7 +26,6 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.util.AttributeFactory;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import org.junit.Test;
 import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
