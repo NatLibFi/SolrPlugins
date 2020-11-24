@@ -16,6 +16,7 @@
 
 package fi.nationallibrary.ndl.solrvoikko2;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +27,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
 /**
  * Voikko Filter Factory
@@ -51,12 +50,14 @@ public class VoikkoFilterFactory extends TokenFilterFactory {
   private final int statsInterval;
   private final Voikko voikko;
   private final Cache<String, List<CompoundToken>> cache;
-  private final Logger log = LoggerFactory.getLogger(VoikkoFilterFactory.class.getName());
+  private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public VoikkoFilterFactory(Map<String, String> args) {
     super(args);
-    String dictionaryPath = get(args, "dictionaryPath", "");
-    voikko = new Voikko("fi-x-morphoid", dictionaryPath.isEmpty() ? null : dictionaryPath);
+    final String language = get(args, "dictionaryLanguage", "fi-x-morphoid");
+    final String dictionaryPath = get(args, "dictionaryPath", "");
+    log.info("initializing " + language + " with dictionary path " + (dictionaryPath.isEmpty() ? "[default]" : dictionaryPath));
+    voikko = new Voikko(language, dictionaryPath.isEmpty() ? null : dictionaryPath);
     minWordSize = getInt(args, "minWordSize", VoikkoFilter.DEFAULT_MIN_WORD_SIZE);
     minSubwordSize = getInt(args, "minSubwordSize", VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE);
     maxSubwordSize = getInt(args, "maxSubwordSize", VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE);
