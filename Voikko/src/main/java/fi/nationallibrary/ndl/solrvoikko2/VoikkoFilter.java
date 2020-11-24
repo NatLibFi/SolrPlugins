@@ -17,6 +17,7 @@
 package fi.nationallibrary.ndl.solrvoikko2;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -33,8 +34,6 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
-
-import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
 
 /**
  * Voikko Filter
@@ -88,7 +87,7 @@ public class VoikkoFilter extends TokenFilter {
   private final static AtomicLong analysisCount = new AtomicLong();
   private final static AtomicLong analysisTime = new AtomicLong();
 
-  private static final Logger log = LoggerFactory.getLogger(VoikkoFilter.class.getName());
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   protected VoikkoFilter(TokenStream input, Voikko voikko, boolean expandCompounds, int minWordSize, int minSubwordSize, int maxSubwordSize, boolean allAnalysis, Cache<String, List<CompoundToken>> cache, int statsInterval) {
     super(input);
