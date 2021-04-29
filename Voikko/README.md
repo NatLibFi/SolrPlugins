@@ -13,5 +13,5 @@ Manual Testing
 
 More Information
 ----------------
-See the wiki page at <https://github.com/NatLibFi/SolrPlugins/wiki/Voikko-plugin> for more information about installation and configuration.
+See the wiki page at <https://github.com/NatLibFi/SolrPlugins/wiki> for more information about installation and configuration.
 

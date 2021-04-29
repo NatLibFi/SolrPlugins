@@ -41,6 +41,9 @@ import fi.nationallibrary.ndl.solrvoikko2.CompoundToken;
  */
 public class VoikkoTest
 {
+    protected Tokenizer tokenizer;
+    protected VoikkoFilter voikkoFilter = null;
+
     /**
      * Tests for Voikko
      */
@@ -51,43 +54,51 @@ public class VoikkoTest
 
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "kyminsanomat",
-            "kyminsanoma [1:0:12],kymi [0:0:12],kymin [0:0:12],sanoma [1:0:12],sanoa [0:0:12],sano [0:0:12],ma [1:0:12]"
+            "kyminsanoma 1:0:12:3,kymi 0:0:12:1,kymin 0:0:12:1,sanoma 1:0:12:1,sanoa 0:0:12:1,sano 0:0:12:1,ma 1:0:12:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "taidemaalaus",
-            "taidemaalaus [1:0:12],taide [0:0:12],maalata [1:0:12],maalaus [0:0:12]"
+            "taidemaalaus 1:0:12:2,taide 0:0:12:1,maalata 1:0:12:1,maalaus 0:0:12:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "lopputarkastuspöytäkirja",
-            "lopputarkastuspöytäkirja [1:0:24],loppu [0:0:24],tarkastaa [1:0:24],tarkastus [0:0:24],pöytä [1:0:24],kirja [1:0:24]"
+            "lopputarkastuspöytäkirja 1:0:24:4,loppu 0:0:24:1,tarkastaa 1:0:24:1,tarkastus 0:0:24:1,pöytä 1:0:24:1,kirja 1:0:24:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "totalgibberish",
-            "totalgibberish [1:0:14]"
+            "totalgibberish 1:0:14:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "moottorisaha",
-            "moottorisaha [1:0:12],moottori [0:0:12],saha [1:0:12]"
+            "moottorisaha 1:0:12:2,moottori 0:0:12:1,saha 1:0:12:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "hyvinvointiasiantuntijajärjestelmässä",
-            "hyvinvointiasiantuntijajärjestelmä [1:0:37],hyvinvointi [0:0:37],asia [1:0:37],asian [0:0:37],tuntea [1:0:37],tuntija [0:0:37],järjestelmä [1:0:37]"
+            "hyvinvointiasiantuntijajärjestelmä 1:0:37:4,hyvinvointi 0:0:37:1,asia 1:0:37:1,asian 0:0:37:1,tuntea 1:0:37:1,tuntija 0:0:37:1,järjestelmä 1:0:37:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "kahdeksankulmainen",
-            "kahdeksankulmainen [1:0:18],kahdeksan [0:0:18],kulma [1:0:18],kulmainen [0:0:18]"
+            "kahdeksankulmainen 1:0:18:2,kahdeksan 0:0:18:1,kulma 1:0:18:1,kulmainen 0:0:18:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "perinteinen puutarhakaluste",
-            "perinteinen [1:0:11],perinne [0:0:11],puutarhakaluste [1:12:27],puu [0:12:27],tarha [1:12:27],kaluste [1:12:27]"
+            "perinteinen 1:0:11:1,perinne 0:0:11:1,puutarhakaluste 1:12:27:3,puu 0:12:27:1,tarha 1:12:27:1,kaluste 1:12:27:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "nuorisotyö",
-            "nuorisotyö [1:0:10],nuoriso [0:0:10],työ [1:0:10]"
+            "nuorisotyö 1:0:10:2,nuoriso 0:0:10:1,työ 1:0:10:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "nuorisotyöttömyys",
-            "nuorisotyöttömyys [1:0:17],nuoriso [0:0:17],työ [1:0:17],työttömyys [0:0:17]"
+            "nuorisotyöttömyys 1:0:17:2,nuoriso 0:0:17:1,työ 1:0:17:1,työttömyys 0:0:17:1"
+        ));
+        tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
+            "mangalaboratorio",
+            "mangalaboratorio 1:0:16:2,manga 0:0:16:1,laboratorio 1:0:16:1"
+        ));
+        tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
+            "mangalaboratorio",
+            "mangalaboratorio 1:0:16:2,manga 0:0:16:1,laboratorio 1:0:16:1"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "",
@@ -110,28 +121,33 @@ public class VoikkoTest
      */
     final protected String getVoikkoWords(String term) throws IOException
     {
-        Cache<String, List<CompoundToken>> cache = Caffeine.newBuilder()
-            .maximumSize(100)
-            .build();
+        if (null == voikkoFilter) {
+            Cache<String, List<CompoundToken>> cache = Caffeine.newBuilder()
+                .maximumSize(100)
+                .build();
 
-        Tokenizer tokenizer = new StandardTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY);
-        tokenizer.setReader(new StringReader(term));
-        tokenizer.reset();
+            tokenizer = new StandardTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY);
 
-        Voikko voikko = new Voikko("fi-x-morphoid");
-        VoikkoFilter voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
-            VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
-            VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache, 0);
+            Voikko voikko = new Voikko("fi-x-morphoid");
+            voikkoFilter = new VoikkoFilter(tokenizer, voikko, true,
+                VoikkoFilter.DEFAULT_MIN_WORD_SIZE, VoikkoFilter.DEFAULT_MIN_SUBWORD_SIZE,
+                VoikkoFilter.DEFAULT_MAX_SUBWORD_SIZE, true, cache, 0);
+        }
 
         String results = "";
 
+        tokenizer.setReader(new StringReader(term));
+        tokenizer.reset();
         while (voikkoFilter.incrementToken()) {
             if (!results.isEmpty()) {
                 results += ",";
             }
-            results += voikkoFilter.termAtt.toString() + " [" + voikkoFilter.posIncAtt.getPositionIncrement() + ":" + voikkoFilter.offsetAtt.startOffset() + ":" + voikkoFilter.offsetAtt.endOffset() + "]";
+            results += voikkoFilter.termAtt.toString() + " " + voikkoFilter.posIncAtt.getPositionIncrement()
+                + ":" + voikkoFilter.offsetAtt.startOffset()
+                + ":" + voikkoFilter.offsetAtt.endOffset()
+                + ":" + voikkoFilter.posLenAtt.getPositionLength();
         }
-        voikkoFilter.close();
+        tokenizer.close();
 
         return results;
     }
