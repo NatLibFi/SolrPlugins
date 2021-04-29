@@ -23,17 +23,15 @@ package fi.nationallibrary.ndl.solrvoikko2;
 public class CompoundToken {
   public final CharSequence txt;
   public final int position;
-  public int positionLength;
 
   /** Construct the compound token based on a slice of the current {@link CompoundWordTokenFilterBase#termAtt}. */
   public CompoundToken(CharSequence txt, int position) {
     this.txt = txt;
     this.position = position;
-    this.positionLength = 1;
   }
 
   public int hashCode() {
-    return 1000 * this.position + this.positionLength;
+    return this.position;
   }
 
   /**
@@ -49,7 +47,6 @@ public class CompoundToken {
     CompoundToken t2 = (CompoundToken) obj;
 
     return t2.txt.equals(txt)
-      && t2.position == position
-      && t2.positionLength == positionLength;
+      && t2.position == position;
   }
 }

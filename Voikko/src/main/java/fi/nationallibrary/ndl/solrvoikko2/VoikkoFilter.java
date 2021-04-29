@@ -31,8 +31,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.Voikko;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -64,8 +62,6 @@ public class VoikkoFilter extends TokenFilter {
    */
   public static final int DEFAULT_STATS_INTERVAL = 0;
 
-  public static final String TYPE_SYNONYM = "SYNONYM";
-
   private static final String BASEFORM_ATTR = "BASEFORM";
   private static final String WORDBASES_ATTR = "WORDBASES";
 
@@ -73,8 +69,6 @@ public class VoikkoFilter extends TokenFilter {
   protected final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
   protected final OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
   protected final PositionIncrementAttribute posIncAtt = addAttribute(PositionIncrementAttribute.class);
-  protected final PositionLengthAttribute posLenAtt = addAttribute(PositionLengthAttribute.class);
-  protected final TypeAttribute typeAtt = addAttribute(TypeAttribute.class);
   private State current = null;
   private int currentPosition = 1;
   private final boolean expandCompounds;
@@ -139,7 +133,6 @@ public class VoikkoFilter extends TokenFilter {
         return false;
       }
       termAtt.setEmpty().append(token.txt);
-      posLenAtt.setPositionLength(token.positionLength);
       /*
       It's too complicated trying to get the attributes right especially for
       multi-word strings, so let's keep the original offsets even though we
@@ -150,7 +143,6 @@ public class VoikkoFilter extends TokenFilter {
         offsetAtt.setOffset(token.startOffset, token.endOffset);
       }*/
       posIncAtt.setPositionIncrement(currentPosition > prevPosition ? 1 : 0);
-      typeAtt.setType(TYPE_SYNONYM);
       return true;
     }
 
@@ -162,7 +154,6 @@ public class VoikkoFilter extends TokenFilter {
       if (termLen < minWordSize || !term.matches("[a-zA-ZåäöÅÄÖ]+")) {
         return true;
       }
-      int maxPosition = 1;
       List<CompoundToken> cachedTokens = cache != null
         ? cache.getIfPresent(term.toLowerCase())
         : null;
@@ -230,8 +221,10 @@ public class VoikkoFilter extends TokenFilter {
             int wordPosBase = 1;
             // The string starts with a plus sign, so skip the first (empty) entry
             for (int i = 1; i <= matches.length - 1; i++) {
+              String wordAnalysis = matches[i];
+
               // get rid of equals sign in e.g. di=oksidi
-              final String wordAnalysis = matches[i].replaceAll("=", "");
+              wordAnalysis = wordAnalysis.replaceAll("=", "");
 
               final String wordBody;
               final String wordPart;
@@ -254,7 +247,6 @@ public class VoikkoFilter extends TokenFilter {
                   } else {
                     tokens.add(new CompoundToken(wordPart, wordPosBase));
                   }
-                  maxPosition = Math.max(maxPosition, wordPosBase);
                   ++wordPosBase;
                 }
                 // Add previously composed word
@@ -263,7 +255,6 @@ public class VoikkoFilter extends TokenFilter {
                     composedWord.setLength(maxSubwordSize);
                   }
                   tokens.add(new CompoundToken(composedWord.toString(), wordPos));
-                  maxPosition = Math.max(maxPosition, wordPos);
                   ++wordPos;
                 }
                 composedWord.setLength(0);
@@ -275,19 +266,11 @@ public class VoikkoFilter extends TokenFilter {
                 composedWord.setLength(maxSubwordSize);
               }
               tokens.add(new CompoundToken(composedWord.toString(), wordPos));
-              maxPosition = Math.max(maxPosition, wordPos);
             }
           }
         }
-
-        // Store position length in the first element
-        Iterator<CompoundToken> it = tokens.iterator();
-        if (it.hasNext()) {
-          it.next().positionLength = maxPosition;
-        }
-
+        ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>(tokens);
         if (cache != null) {
-          final ArrayList<CompoundToken> tokenList = new ArrayList<CompoundToken>(tokens);
           cache.put(term.toLowerCase(), tokenList);
         }
       }
@@ -299,10 +282,6 @@ public class VoikkoFilter extends TokenFilter {
         final CompoundToken t = it.next();
         it.remove();
         termAtt.setEmpty().append(t.txt);
-        posLenAtt.setPositionLength(t.positionLength);
-        if (it.hasNext()) {
-          typeAtt.setType(TYPE_SYNONYM);
-        }
       }
 
       if (statsInterval > 0 && tokenCount.incrementAndGet() % statsInterval == 0) {
