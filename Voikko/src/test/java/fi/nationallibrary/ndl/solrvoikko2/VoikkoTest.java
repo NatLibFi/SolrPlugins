@@ -87,7 +87,7 @@ public class VoikkoTest
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "nuorisotyöttömyys",
-            "nuorisotyöttömyys 1:0:17,nuoriso 0:0:17,työ 1:0:17,työttömyys 0:0:17"
+            "nuorisotyöttömyys 1:0:17,nuoriso 0:0:17,työ 1:0:17,työttömyys 0:0:17,työtön 0:0:17"
         ));
         tests.add(new java.util.AbstractMap.SimpleEntry<String, String>(
             "",
